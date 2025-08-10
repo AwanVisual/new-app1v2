@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Package, Search, Trash2 } from 'lucide-react';
-import { PackagePlus } from 'lucide-react';
+import { PackagePlus, PackageMinus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
 import ProductUnitsManager from '@/components/ProductUnitsManager';
@@ -29,9 +29,13 @@ const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [isStockDialogOpen, setIsStockDialogOpen] = useState(false);
+  const [isReduceStockDialogOpen, setIsReduceStockDialogOpen] = useState(false);
   const [stockQuantity, setStockQuantity] = useState<number>(0);
+  const [reduceStockQuantity, setReduceStockQuantity] = useState<number>(0);
   const [stockUnitType, setStockUnitType] = useState<'pcs' | 'base_unit'>('base_unit');
+  const [reduceStockUnitType, setReduceStockUnitType] = useState<'pcs' | 'base_unit'>('base_unit');
   const [stockNotes, setStockNotes] = useState('');
+  const [reduceStockNotes, setReduceStockNotes] = useState('');
 
   const canManage = userRole === 'admin' || userRole === 'stockist';
 
@@ -140,6 +144,32 @@ const Products = () => {
     },
   });
 
+  const reduceStockMutation = useMutation({
+    mutationFn: async ({ productId, quantity, unitType, notes }: any) => {
+      const { error } = await supabase.from('stock_movements').insert([{
+        product_id: productId,
+        transaction_type: 'outbound',
+        quantity: quantity,
+        unit_type: unitType,
+        notes: notes || 'Stock reduction',
+        created_by: user?.id,
+        reference_number: `REDUCE-${Date.now()}`
+      }]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      setIsReduceStockDialogOpen(false);
+      setSelectedProduct(null);
+      setReduceStockQuantity(0);
+      setReduceStockNotes('');
+      toast({ title: "Success", description: "Stock reduced successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const handleAddStock = () => {
     if (!selectedProduct || stockQuantity <= 0) {
       toast({ title: "Error", description: "Please enter a valid quantity", variant: "destructive" });
@@ -151,6 +181,34 @@ const Products = () => {
       quantity: stockQuantity,
       unitType: stockUnitType,
       notes: stockNotes
+    });
+  };
+
+  const handleReduceStock = () => {
+    if (!selectedProduct || reduceStockQuantity <= 0) {
+      toast({ title: "Error", description: "Please enter a valid quantity", variant: "destructive" });
+      return;
+    }
+
+    // Check if there's enough stock to reduce
+    const availableStock = reduceStockUnitType === 'pcs' 
+      ? selectedProduct.stock_pcs || 0
+      : selectedProduct.stock_quantity || 0;
+
+    if (reduceStockQuantity > availableStock) {
+      toast({ 
+        title: "Error", 
+        description: `Not enough stock. Available: ${availableStock} ${reduceStockUnitType === 'pcs' ? 'pcs' : selectedProduct.base_unit}`, 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    reduceStockMutation.mutate({
+      productId: selectedProduct.id,
+      quantity: reduceStockQuantity,
+      unitType: reduceStockUnitType,
+      notes: reduceStockNotes
     });
   };
 
@@ -539,6 +597,18 @@ const Products = () => {
                           <PackagePlus className="h-4 w-4" />
                         </Button>
                         
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedProduct(product);
+                            setIsReduceStockDialogOpen(true);
+                          }}
+                          className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                        >
+                          <PackageMinus className="h-4 w-4" />
+                        </Button>
+                        
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button
@@ -656,6 +726,89 @@ const Products = () => {
                 disabled={addStockMutation.isPending || stockQuantity <= 0}
               >
                 {addStockMutation.isPending ? 'Adding...' : 'Add Stock'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reduce Stock Dialog */}
+      <Dialog open={isReduceStockDialogOpen} onOpenChange={setIsReduceStockDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reduce Stock - {selectedProduct?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="reduceStockUnitType">Unit Type</Label>
+              <Select value={reduceStockUnitType} onValueChange={(value: 'pcs' | 'base_unit') => setReduceStockUnitType(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="base_unit">{selectedProduct?.base_unit || 'Base Unit'}</SelectItem>
+                  <SelectItem value="pcs">Pieces (pcs)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground mt-1">
+                {reduceStockUnitType === 'base_unit' 
+                  ? `1 ${selectedProduct?.base_unit} = ${selectedProduct?.pcs_per_base_unit || 1} pcs`
+                  : 'Direct piece count'
+                }
+              </p>
+              <p className="text-sm text-blue-600 mt-1">
+                Available: {reduceStockUnitType === 'pcs' 
+                  ? `${selectedProduct?.stock_pcs || 0} pcs`
+                  : `${selectedProduct?.stock_quantity || 0} ${selectedProduct?.base_unit || 'units'}`
+                }
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="reduceStockQuantity">Quantity to Reduce</Label>
+              <Input
+                id="reduceStockQuantity"
+                type="number"
+                min="1"
+                max={reduceStockUnitType === 'pcs' 
+                  ? selectedProduct?.stock_pcs || 0
+                  : selectedProduct?.stock_quantity || 0
+                }
+                value={reduceStockQuantity}
+                onChange={(e) => setReduceStockQuantity(parseInt(e.target.value) || 0)}
+                placeholder="Enter quantity to reduce"
+              />
+              {reduceStockUnitType === 'base_unit' && selectedProduct?.pcs_per_base_unit > 1 && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  This will reduce {reduceStockQuantity * (selectedProduct?.pcs_per_base_unit || 1)} pieces from stock
+                </p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="reduceStockNotes">Reason (Optional)</Label>
+              <Input
+                id="reduceStockNotes"
+                value={reduceStockNotes}
+                onChange={(e) => setReduceStockNotes(e.target.value)}
+                placeholder="Reason for stock reduction (e.g., damaged, expired, etc.)"
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsReduceStockDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleReduceStock}
+                disabled={reduceStockMutation.isPending || reduceStockQuantity <= 0}
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                {reduceStockMutation.isPending ? 'Reducing...' : 'Reduce Stock'}
               </Button>
             </div>
           </div>
