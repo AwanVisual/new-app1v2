@@ -391,7 +391,18 @@ const Cashier = () => {
         change_amount: Math.max(0, effectivePaymentReceived - totalAmount),
         created_by: user?.id,
         cashier_id: user?.id,
-        notes: selectedCashier ? `Sales: ${selectedCashier}${bankDetails ? ` | Bank Details: ${bankDetails}` : ''}` : (bankDetails ? `Bank Details: ${bankDetails}` : null),
+        notes: JSON.stringify({
+          sales_person: selectedCashier || null,
+          bank_details: bankDetails || null,
+          discount_config: {
+            use_special_customer_calculation: receiptConfig.useSpecialCustomerCalculation,
+            global_discount_percentage: receiptConfig.discountPercentage,
+            show_amount: receiptConfig.showAmount,
+            show_dpp_faktur: receiptConfig.showDppFaktur,
+            show_discount: receiptConfig.showDiscount,
+            show_ppn11: receiptConfig.showPpn11
+          }
+        }),
         invoice_status: paymentMethod === 'credit' ? 'belum_bayar' : 'lunas',
       };
 
@@ -410,8 +421,8 @@ const Cashier = () => {
       const saleItems = cart.map((item) => ({
         sale_id: sale.id,
         product_id: item.product.id,
-        unit_id: null,
-        unit_type: item.unitType,
+        unit_id: null, // Keep null for now, bisa dikembangkan nanti
+        unit_type: item.unitType, // Simpan unit type (pcs atau base_unit)
         quantity: item.quantity,
         unit_price: item.unitType === 'pcs' 
           ? Number(item.product.price_per_pcs || item.product.price)
@@ -431,8 +442,8 @@ const Cashier = () => {
       // Create stock movements for each item
       const stockMovements = cart.map((item) => ({
         product_id: item.product.id,
-        unit_id: null,
-        unit_type: item.unitType,
+        unit_id: null, // Keep null for now
+        unit_type: item.unitType, // Simpan unit type untuk stock movement
         transaction_type: "outbound" as any,
         quantity: item.quantity,
         reference_number: saleNumber,
