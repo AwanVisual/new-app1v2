@@ -1067,19 +1067,7 @@ const Reports = () => {
             </CardContent>
           </Card>
 
-                      console.log('Save button clicked');
-                      console.log('Current editItem:', editItem);
-                      console.log('Original item from selectedSale:', selectedSale?.sale_items?.find(item => item.id === editItem.id));
-                      
           {/* Edit Items Dialog */}
-                      
-                      if (!originalItem) {
-                        console.error('Original item not found!');
-                        return;
-                      }
-                      
-                      console.log('Original item data:', originalItem);
-                      
           <Dialog open={!!editingItems} onOpenChange={() => setEditingItems(null)}>
             <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
