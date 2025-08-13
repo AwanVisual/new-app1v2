@@ -26,6 +26,7 @@ interface ReceiptFieldsConfig {
   showDiscount: boolean;
   showPpn11: boolean;
   discountPercentage: number;
+  useSpecialCustomerCalculation: boolean;
 }
 
 interface PreCheckoutDialogProps {
@@ -43,6 +44,7 @@ const PreCheckoutDialog = ({ open, onOpenChange, cart, onCartUpdate, onProceedTo
     showDiscount: false,
     showPpn11: false,
     discountPercentage: 0,
+    useSpecialCustomerCalculation: false,
   });
 
   const calculateDetailedPricing = (item: CartItem) => {
@@ -52,25 +54,43 @@ const PreCheckoutDialog = ({ open, onOpenChange, cart, onCartUpdate, onProceedTo
     // Use individual item discount instead of global discount
     const itemDiscount = item.customDiscount || 0;
     
-    const amount = quantity * price;
-    const dpp11 = (100 / 111) * price;
-    const discount = (itemDiscount / 100) * dpp11;
-    const dppFaktur = dpp11 - discount;
-    const dppLain = (11 / 12) * dppFaktur;
-    
-    // PPN 11% and PPN 12% must return the same value
-    const ppn11 = 0.11 * dppFaktur;
-    const ppn12 = ppn11; // Same value as PPN 11%
-    
-    return {
-      amount,
-      dpp11: dpp11 * quantity,
-      discount: discount * quantity,
-      dppFaktur: dppFaktur * quantity,
-      dppLain: dppLain * quantity,
-      ppn11: ppn11 * quantity,
-      ppn12: ppn12 * quantity,
-    };
+    if (receiptConfig.useSpecialCustomerCalculation) {
+      // Special customer calculation (existing logic)
+      const amount = quantity * price;
+      const dpp11 = (100 / 111) * price;
+      const discount = (itemDiscount / 100) * dpp11;
+      const dppFaktur = dpp11 - discount;
+      const dppLain = (11 / 12) * dppFaktur;
+      
+      // PPN 11% and PPN 12% must return the same value
+      const ppn11 = 0.11 * dppFaktur;
+      const ppn12 = ppn11; // Same value as PPN 11%
+      
+      return {
+        amount,
+        dpp11: dpp11 * quantity,
+        discount: discount * quantity,
+        dppFaktur: dppFaktur * quantity,
+        dppLain: dppLain * quantity,
+        ppn11: ppn11 * quantity,
+        ppn12: ppn12 * quantity,
+      };
+    } else {
+      // Simple discount calculation - direct price reduction
+      const discountAmount = (itemDiscount / 100) * price;
+      const discountedPrice = price - discountAmount;
+      const finalItemTotal = discountedPrice * quantity;
+      
+      return {
+        amount: quantity * price,
+        dpp11: 0,
+        discount: discountAmount * quantity,
+        dppFaktur: discountedPrice * quantity,
+        dppLain: 0,
+        ppn11: 0,
+        ppn12: 0,
+      };
+    }
   };
 
   const calculateTotals = () => {
@@ -106,16 +126,47 @@ const PreCheckoutDialog = ({ open, onOpenChange, cart, onCartUpdate, onProceedTo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Pre-Checkout Pricing Breakdown (Special Customer)</DialogTitle>
+          <DialogTitle>Discount Options & Pricing Configuration</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Global Discount Configuration - Now mainly for receipt display options */}
+          {/* Discount Type Selection */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Global Discount Configuration (Receipt Display)</CardTitle>
+              <CardTitle className="text-lg">Discount Type</CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="useSpecialCustomerCalculation"
+                    checked={receiptConfig.useSpecialCustomerCalculation}
+                    onCheckedChange={(checked) => 
+                      setReceiptConfig(prev => ({ ...prev, useSpecialCustomerCalculation: checked as boolean }))
+                    }
+                  />
+                  <Label htmlFor="useSpecialCustomerCalculation" className="font-medium">
+                    Use Special Customer Calculation (DPP, PPN, etc.)
+                  </Label>
+                </div>
+                <p className="text-sm text-muted-foreground ml-6">
+                  {receiptConfig.useSpecialCustomerCalculation 
+                    ? "Advanced pricing with DPP 11%, PPN calculations, and detailed breakdown"
+                    : "Simple discount - direct percentage reduction from item prices"
+                  }
+                </p>
+              </div>
+              
+              {!receiptConfig.useSpecialCustomerCalculation && (
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                  <h4 className="font-medium text-blue-800 mb-2">Simple Discount Mode</h4>
+                  <p className="text-sm text-blue-700">
+                    Item discounts will be applied directly to prices. 
+                    Example: 10% discount on Rp 100,000 = Rp 90,000 final price.
+                  </p>
+                </div>
+              )}
+              
               <div className="flex items-center space-x-4">
                 <Label htmlFor="discountPercentage">Global Discount Percentage (for receipt header):</Label>
                 <Input
@@ -192,34 +243,43 @@ const PreCheckoutDialog = ({ open, onOpenChange, cart, onCartUpdate, onProceedTo
                           <span className="text-muted-foreground">Amount:</span>
                           <div className="font-medium">{formatCurrency(calc.amount)}</div>
                         </div>
-                        <div>
-                          <span className="text-muted-foreground">DPP 11%:</span>
-                          <div className="font-medium text-gray-500">{formatCurrency(calc.dpp11)}</div>
-                        </div>
+                        {receiptConfig.useSpecialCustomerCalculation && (
+                          <div>
+                            <span className="text-muted-foreground">DPP 11%:</span>
+                            <div className="font-medium text-gray-500">{formatCurrency(calc.dpp11)}</div>
+                          </div>
+                        )}
                         <div>
                           <span className="text-muted-foreground">Discount ({item.customDiscount}%):</span>
                           <div className="font-medium">{formatCurrency(calc.discount)}</div>
                         </div>
-                        <div>
-                          <span className="text-muted-foreground">DPP Faktur:</span>
-                          <div className="font-medium">{formatCurrency(calc.dppFaktur)}</div>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">DPP Lain:</span>
-                          <div className="font-medium text-gray-500">{formatCurrency(calc.dppLain)}</div>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">PPN 11%:</span>
-                          <div className="font-medium">{formatCurrency(calc.ppn11)}</div>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">PPN 12% (Same as 11%):</span>
-                          <div className="font-medium">{formatCurrency(calc.ppn12)}</div>
-                        </div>
+                        {receiptConfig.useSpecialCustomerCalculation && (
+                          <>
+                            <div>
+                              <span className="text-muted-foreground">DPP Faktur:</span>
+                              <div className="font-medium">{formatCurrency(calc.dppFaktur)}</div>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">DPP Lain:</span>
+                              <div className="font-medium text-gray-500">{formatCurrency(calc.dppLain)}</div>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">PPN 11%:</span>
+                              <div className="font-medium">{formatCurrency(calc.ppn11)}</div>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">PPN 12% (Same as 11%):</span>
+                              <div className="font-medium">{formatCurrency(calc.ppn12)}</div>
+                            </div>
+                          </>
+                        )}
                         <div>
                           <span className="text-muted-foreground">Final Total:</span>
                           <div className="font-medium text-lg text-green-600">
-                            {formatCurrency(calc.dppFaktur + calc.ppn11)}
+                            {formatCurrency(receiptConfig.useSpecialCustomerCalculation 
+                              ? calc.dppFaktur + calc.ppn11 
+                              : calc.finalItemTotal
+                            )}
                           </div>
                         </div>
                       </div>
@@ -277,16 +337,18 @@ const PreCheckoutDialog = ({ open, onOpenChange, cart, onCartUpdate, onProceedTo
                   <Label htmlFor="showAmount">Show Amount</Label>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showDppFaktur"
-                    checked={receiptConfig.showDppFaktur}
-                    onCheckedChange={(checked) => 
-                      setReceiptConfig(prev => ({ ...prev, showDppFaktur: checked as boolean }))
-                    }
-                  />
-                  <Label htmlFor="showDppFaktur">Show DPP Faktur</Label>
-                </div>
+                {receiptConfig.useSpecialCustomerCalculation && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="showDppFaktur"
+                      checked={receiptConfig.showDppFaktur}
+                      onCheckedChange={(checked) => 
+                        setReceiptConfig(prev => ({ ...prev, showDppFaktur: checked as boolean }))
+                      }
+                    />
+                    <Label htmlFor="showDppFaktur">Show DPP Faktur</Label>
+                  </div>
+                )}
 
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -299,16 +361,18 @@ const PreCheckoutDialog = ({ open, onOpenChange, cart, onCartUpdate, onProceedTo
                   <Label htmlFor="showDiscount">Show Discount Summary</Label>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showPpn11"
-                    checked={receiptConfig.showPpn11}
-                    onCheckedChange={(checked) => 
-                      setReceiptConfig(prev => ({ ...prev, showPpn11: checked as boolean }))
-                    }
-                  />
-                  <Label htmlFor="showPpn11">Show PPN 11%</Label>
-                </div>
+                {receiptConfig.useSpecialCustomerCalculation && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="showPpn11"
+                      checked={receiptConfig.showPpn11}
+                      onCheckedChange={(checked) => 
+                        setReceiptConfig(prev => ({ ...prev, showPpn11: checked as boolean }))
+                      }
+                    />
+                    <Label htmlFor="showPpn11">Show PPN 11%</Label>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -41,6 +41,7 @@ interface ReceiptFieldsConfig {
   showDiscount: boolean;
   showPpn11: boolean;
   discountPercentage: number;
+  useSpecialCustomerCalculation: boolean;
 }
 
 const Cashier = () => {
@@ -59,6 +60,7 @@ const Cashier = () => {
     showDiscount: false,
     showPpn11: false,
     discountPercentage: 0,
+    useSpecialCustomerCalculation: false,
   });
   const [selectedCashier, setSelectedCashier] = useState<string>("");
 
@@ -79,26 +81,45 @@ const Cashier = () => {
     const quantity = item.quantity;
     const itemDiscount = item.customDiscount || 0;
 
-    const amount = quantity * price;
-    const dpp11 = (100 / 111) * price;
-    const discount = (itemDiscount / 100) * dpp11;
-    const dppFaktur = dpp11 - discount;
-    const dppLain = (11 / 12) * dppFaktur;
+    if (receiptConfig.useSpecialCustomerCalculation) {
+      // Special customer calculation (existing logic)
+      const amount = quantity * price;
+      const dpp11 = (100 / 111) * price;
+      const discount = (itemDiscount / 100) * dpp11;
+      const dppFaktur = dpp11 - discount;
+      const dppLain = (11 / 12) * dppFaktur;
 
-    // PPN 11% and PPN 12% must return the same value
-    const ppn11 = 0.11 * dppFaktur;
-    const ppn12 = ppn11; // Same value as PPN 11%
+      // PPN 11% and PPN 12% must return the same value
+      const ppn11 = 0.11 * dppFaktur;
+      const ppn12 = ppn11; // Same value as PPN 11%
 
-    return {
-      amount,
-      dpp11: dpp11 * quantity,
-      discount: discount * quantity,
-      dppFaktur: dppFaktur * quantity,
-      dppLain: dppLain * quantity,
-      ppn11: ppn11 * quantity,
-      ppn12: ppn12 * quantity,
-      finalItemTotal: (dppFaktur + ppn11) * quantity,
-    };
+      return {
+        amount,
+        dpp11: dpp11 * quantity,
+        discount: discount * quantity,
+        dppFaktur: dppFaktur * quantity,
+        dppLain: dppLain * quantity,
+        ppn11: ppn11 * quantity,
+        ppn12: ppn12 * quantity,
+        finalItemTotal: (dppFaktur + ppn11) * quantity,
+      };
+    } else {
+      // Simple discount calculation - direct price reduction
+      const discountAmount = (itemDiscount / 100) * price;
+      const discountedPrice = price - discountAmount;
+      const finalItemTotal = discountedPrice * quantity;
+      
+      return {
+        amount: quantity * price,
+        dpp11: 0,
+        discount: discountAmount * quantity,
+        dppFaktur: discountedPrice * quantity,
+        dppLain: 0,
+        ppn11: 0,
+        ppn12: 0,
+        finalItemTotal: finalItemTotal,
+      };
+    }
   };
 
   const { data: products } = useReactQuery({
@@ -320,10 +341,17 @@ const Cashier = () => {
   const handlePreCheckoutProceed = (config: ReceiptFieldsConfig) => {
     setReceiptConfig(config);
     setShowPreCheckout(false);
-    toast({
-      title: "Special Customer Pricing Applied",
-      description: `Global discount: ${config.discountPercentage}%. You can now complete the sale with the configured pricing.`,
-    });
+    if (config.useSpecialCustomerCalculation) {
+      toast({
+        title: "Special Customer Pricing Applied",
+        description: `Advanced pricing calculation enabled. You can now complete the sale with the configured pricing.`,
+      });
+    } else {
+      toast({
+        title: "Simple Discount Applied",
+        description: `Direct price discount enabled. Item discounts will be applied directly to prices.`,
+      });
+    }
   };
 
   const processSaleMutation = useMutation({
@@ -1130,7 +1158,7 @@ const Cashier = () => {
                       disabled={cart.length === 0}
                     >
                       <Calculator className="h-4 w-4 mr-2" />
-                      Special Customer Pricing (Optional)
+                      Discount Options (Optional)
                     </Button>
 
                     <Button
