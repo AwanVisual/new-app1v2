@@ -1276,9 +1276,9 @@ const Reports = () => {
                     <TableHead>Product</TableHead>
                     <TableHead>SKU</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead>Stock</TableHead>
+                    <TableHead>Stock Base Unit</TableHead>
+                    <TableHead>Stock Pcs</TableHead>
                     <TableHead>Min Level</TableHead>
-                    <TableHead>Value</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1287,12 +1287,14 @@ const Reports = () => {
                     <TableRow key={product.id}>
                       <TableCell className="font-medium">{product.name}</TableCell>
                       <TableCell>{product.sku}</TableCell>
-                      <TableCell>{product.categories?.name || 'No Category'}</TableCell>
-                      <TableCell>{product.stock_quantity}</TableCell>
-                      <TableCell>{product.min_stock_level}</TableCell>
+                      <TableCell>{product.categories?.name || 'Uncategorized'}</TableCell>
                       <TableCell>
-                        {formatCurrency(Number(product.cost) * product.stock_quantity)}
+                        {Math.floor(product.stock_quantity)} {product.base_unit || 'units'}
                       </TableCell>
+                      <TableCell>
+                        {product.stock_pcs || 0} pcs
+                      </TableCell>
+                      <TableCell>{product.min_stock_level}</TableCell>
                       <TableCell>
                         <Badge
                           variant={
