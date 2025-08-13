@@ -15,7 +15,6 @@ import { Plus, Edit, Package, Search, Trash2 } from 'lucide-react';
 import { PackagePlus, PackageMinus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
-import ProductUnitsManager from '@/components/ProductUnitsManager';
 import CategoryInput from '@/components/CategoryInput';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -25,7 +24,6 @@ const Products = () => {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
-  const [showUnitsManager, setShowUnitsManager] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [isStockDialogOpen, setIsStockDialogOpen] = useState(false);
@@ -39,14 +37,6 @@ const Products = () => {
 
   const canManage = userRole === 'admin' || userRole === 'stockist';
 
-  const { data: categories } = useQuery({
-    queryKey: ['categories'],
-    queryFn: async () => {
-      const { data } = await supabase.from('categories').select('*');
-      return data || [];
-    },
-  });
-
   const { data: products, isLoading } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
@@ -54,6 +44,14 @@ const Products = () => {
         .from('products')
         .select('*, categories(name)')
         .order('created_at', { ascending: false });
+      return data || [];
+    },
+  });
+
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data } = await supabase.from('categories').select('*');
       return data || [];
     },
   });
@@ -251,9 +249,6 @@ const Products = () => {
   // Close units manager when dialog closes
   const handleDialogClose = (open: boolean) => {
     setIsDialogOpen(open);
-    if (!open) {
-      setShowUnitsManager(null);
-    }
   };
 
   return (
@@ -460,28 +455,6 @@ const Products = () => {
                     />
                   </div>
 
-                  {editingProduct && (
-                    <div className="border-t pt-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold">Product Units</h3>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setShowUnitsManager(showUnitsManager === editingProduct.id ? null : editingProduct.id)}
-                        >
-                          <Package className="h-4 w-4 mr-2" />
-                          {showUnitsManager === editingProduct.id ? 'Hide Units' : 'Manage Units'}
-                        </Button>
-                      </div>
-                      {showUnitsManager === editingProduct.id && (
-                        <ProductUnitsManager
-                          productId={editingProduct.id}
-                          productName={editingProduct.name}
-                        />
-                      )}
-                    </div>
-                  )}
-
                   <div className="flex justify-end space-x-2">
                     <Button type="button" variant="outline" onClick={() => handleDialogClose(false)}>
                       Cancel
@@ -580,14 +553,6 @@ const Products = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setShowUnitsManager(showUnitsManager === product.id ? null : product.id)}
-                        >
-                          <Package className="h-4 w-4" />
-                        </Button>
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
                           onClick={() => {
                             setSelectedProduct(product);
                             setIsStockDialogOpen(true);
@@ -645,16 +610,6 @@ const Products = () => {
                   )}
                 </TableRow>
               ))}
-              {showUnitsManager && (
-                <TableRow>
-                  <TableCell colSpan={canManage ? 8 : 7}>
-                    <ProductUnitsManager
-                      productId={showUnitsManager}
-                      productName={filteredProducts?.find(p => p.id === showUnitsManager)?.name || ''}
-                    />
-                  </TableCell>
-                </TableRow>
-              )}
             </TableBody>
           </Table>
         </CardContent>
