@@ -9,10 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { BarChart3, Download, TrendingUp, Package, ShoppingCart, Calendar, Edit, Printer, Save, X } from 'lucide-react';
+import { BarChart3, Download, TrendingUp, Package, ShoppingCart, Calendar, Edit, Printer, Save, X, Minus, Plus } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { toast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
 
 const Reports = () => {
   const [dateRange, setDateRange] = useState('today');
@@ -22,6 +23,9 @@ const Reports = () => {
   const queryClient = useQueryClient();
   const [editingItems, setEditingItems] = useState<string | null>(null);
   const [editItemsData, setEditItemsData] = useState<any[]>([]);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [selectedSale, setSelectedSale] = useState<any>(null);
 
   // Calculate date range
   const getDateRange = () => {
@@ -140,6 +144,35 @@ const Reports = () => {
       toast({
         title: "Success",
         description: "Sale updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update sale item mutation
+  const updateSaleItemMutation = useMutation({
+    mutationFn: async (updatedItem: any) => {
+      const { error } = await supabase
+        .from('sale_items')
+        .update(updatedItem)
+        .eq('id', updatedItem.id);
+
+      if (error) throw error;
+      return updatedItem;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales-reports'] });
+      setIsEditDialogOpen(false);
+      setEditingItem(null);
+      toast({
+        title: "Success",
+        description: "Item updated successfully",
       });
     },
     onError: (error: any) => {
@@ -296,6 +329,50 @@ const Reports = () => {
     const updatedItems = [...editItemsData];
     updatedItems.splice(index, 1);
     setEditItemsData(updatedItems);
+  };
+
+  // Update editing quantity
+  const updateEditingQuantity = (newQuantity: number) => {
+    if (newQuantity >= 1) {
+      setEditingItem(prev => ({ ...prev, currentQuantity: newQuantity }));
+    }
+  };
+
+  // Handle save edit
+  const handleSaveEditItem = () => {
+    console.log('Save button clicked');
+    console.log('Current editingItem:', editingItem);
+    console.log('Original item from selectedSale:', selectedSale?.sale_items?.find(item => item.id === editingItem.id));
+    
+    const originalItem = selectedSale?.sale_items?.find(item => item.id === editingItem.id);
+    
+    if (!originalItem) {
+      console.error('Original item not found!');
+      return;
+    }
+    
+    console.log('Original item data:', originalItem);
+    
+    // Calculate new quantity in pcs for database storage
+    const newQuantityInPcs = editingItem.currentUnitType === 'pcs' 
+      ? editingItem.currentQuantity 
+      : editingItem.currentQuantity * (editingItem.products?.pcs_per_base_unit || 1);
+
+    // Calculate new unit price for database storage (always store as price per pcs)
+    const newUnitPrice = editingItem.currentUnitType === 'pcs'
+      ? Number(editingItem.products?.price_per_pcs || editingItem.products?.price)
+      : Number(editingItem.products?.price);
+
+    const updatedItem = {
+      id: editingItem.id,
+      quantity: newQuantityInPcs,
+      unit_price: newUnitPrice,
+      unit_type: editingItem.currentUnitType,
+      subtotal: newUnitPrice * newQuantityInPcs,
+    };
+
+    console.log('Updated item to save:', updatedItem);
+    updateSaleItemMutation.mutate(updatedItem);
   };
 
   // Print receipt function
@@ -812,6 +889,132 @@ const Reports = () => {
           </Button>
         </div>
       </div>
+
+      {/* Edit Item Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Item</DialogTitle>
+          </DialogHeader>
+          
+          {editingItem && (
+            <div className="space-y-4">
+              <div className="border rounded-lg p-4">
+                <h4 className="font-medium mb-2">{editingItem.products?.name}</h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  SKU: {editingItem.products?.sku}
+                </p>
+                
+                {/* Unit Type Selection */}
+                <div className="space-y-2 mb-4">
+                  <Label>Unit Type</Label>
+                  <div className="flex items-center space-x-2">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <Select
+                      value={editingItem.currentUnitType}
+                      onValueChange={(value) => {
+                        console.log('🔄 Unit type changed to:', value);
+                        setEditingItem(prev => ({ ...prev, currentUnitType: value }));
+                      }}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pcs">Pcs</SelectItem>
+                        <SelectItem value="base_unit">
+                          {editingItem.products?.base_unit || 'Unit'}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    1 {editingItem.products?.base_unit || 'unit'} = {editingItem.products?.pcs_per_base_unit || 1} pcs
+                  </p>
+                </div>
+                
+                {/* Quantity Controls */}
+                <div className="space-y-2 mb-4">
+                  <Label>Quantity</Label>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateEditingQuantity(editingItem.currentQuantity - 1)}
+                      disabled={editingItem.currentQuantity <= 1}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <div className="w-20 text-center">
+                      <span className="text-lg font-medium">
+                        {editingItem.currentQuantity}
+                      </span>
+                      <div className="text-xs text-muted-foreground">
+                        {editingItem.currentUnitType === 'pcs' ? 'pcs' : (editingItem.products?.base_unit || 'unit')}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateEditingQuantity(editingItem.currentQuantity + 1)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {editingItem.currentUnitType === 'base_unit' && editingItem.products?.pcs_per_base_unit > 1 && (
+                    <p className="text-xs text-muted-foreground">
+                      = {editingItem.currentQuantity * (editingItem.products?.pcs_per_base_unit || 1)} pcs total
+                    </p>
+                  )}
+                </div>
+                
+                {/* Price Info */}
+                <div className="space-y-2 mb-4">
+                  <Label>Price per {editingItem.currentUnitType === 'pcs' ? 'pcs' : (editingItem.products?.base_unit || 'unit')}</Label>
+                  <div className="text-lg font-medium">
+                    {formatCurrency(
+                      editingItem.currentUnitType === 'pcs' 
+                        ? Number(editingItem.products?.price_per_pcs || editingItem.products?.price)
+                        : Number(editingItem.products?.price)
+                    )}
+                  </div>
+                </div>
+                
+                {/* Total */}
+                <div className="border-t pt-3">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Total:</span>
+                    <span className="text-lg font-bold text-green-600">
+                      {formatCurrency(
+                        (editingItem.currentUnitType === 'pcs' 
+                          ? Number(editingItem.products?.price_per_pcs || editingItem.products?.price)
+                          : Number(editingItem.products?.price)
+                        ) * editingItem.currentQuantity
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsEditDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleSaveEditItem}
+                  disabled={updateSaleItemMutation.isPending}
+                >
+                  {updateSaleItemMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-3">
