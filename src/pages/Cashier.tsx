@@ -327,7 +327,7 @@ const Cashier = () => {
   };
 
   // Handle proceed to payment
-  const handleProceedToPayment = (config: ReceiptFieldsConfig) => {
+  const handleProceedToPayment = async (config: ReceiptFieldsConfig) => {
     setReceiptConfig(config);
     setIsPreCheckoutOpen(false);
 
@@ -340,8 +340,28 @@ const Cashier = () => {
       return;
     }
 
+    // Generate or use existing sale number
+    let saleNumber: string;
+    if (useOriginalNumber && foundSale) {
+      saleNumber = foundSale.sale_number;
+    } else {
+      // Generate new sale number using Supabase RPC
+      const { data: generatedNumber, error: numberError } = await supabase
+        .rpc('generate_sale_number');
+      
+      if (numberError) {
+        toast({
+          title: "Error",
+          description: "Gagal membuat nomor penjualan",
+          variant: "destructive",
+        });
+        return;
+      }
+      saleNumber = generatedNumber;
+    }
+
     const saleData = {
-      sale_number: useOriginalNumber && foundSale ? foundSale.sale_number : undefined,
+      sale_number: saleNumber,
       customer_name: customerName || null,
       subtotal: totals.subtotal,
       tax_amount: 0,
