@@ -64,12 +64,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) {
         console.error('Error getting session:', error);
         // Clear any invalid session data
-        signOut();
+        signOut().then(() => setLoading(false));
       } else {
         setSession(session);
         setUser(session?.user ?? null);
+        setLoading(false);
       }
-      setLoading(false);
     }).catch(async (error) => {
       console.error('Session retrieval failed:', error);
       // Clear invalid session data
