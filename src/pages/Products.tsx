@@ -497,7 +497,7 @@ const Products = () => {
                 <TableHead>Base Unit</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Stock</TableHead>
-               <TableHead>Stock History</TableHead>
+               <TableHead>History</TableHead>
                 <TableHead>Status</TableHead>
                 {canManage && <TableHead>Actions</TableHead>}
               </TableRow>
@@ -526,32 +526,18 @@ const Products = () => {
                           ({product.stock_pcs || 0} pcs)
                         </span>
                       )}
-                     <div className="text-xs text-blue-600 ml-2">
-                       Initial: {product.initial_stock_pcs || 0} pcs
-                     </div>
                     </div>
-                   <div className="text-xs text-muted-foreground mt-1">
-                     Added: {product.total_stock_added || 0} pcs | 
-                     Reduced: {product.total_stock_reduced || 0} pcs | 
-                     Movements: {product.stock_movement_count || 0}x
-                   </div>
                   </TableCell>
-                 <TableCell>
-                   <div className="space-y-1">
-                     <div className="text-sm">
-                       <span className="text-blue-600">Initial:</span> {product.initial_stock_quantity || 0} {product.base_unit || 'units'}
-                     </div>
-                     <div className="text-sm">
-                       <span className="text-green-600">+Added:</span> {product.total_stock_added || 0} pcs
-                     </div>
-                     <div className="text-sm">
-                       <span className="text-red-600">-Reduced:</span> {product.total_stock_reduced || 0} pcs
-                     </div>
-                     <div className="text-xs text-muted-foreground">
-                       {product.stock_movement_count || 0} movements total
-                     </div>
-                   </div>
-                 </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    >
+                      <Package className="h-4 w-4 mr-1" />
+                      {product.stock_movement_count || 0}x
+                    </Button>
+                  </TableCell>
                   <TableCell>
                     <Badge
                       variant={
