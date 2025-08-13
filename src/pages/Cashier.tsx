@@ -400,8 +400,11 @@ const Cashier = () => {
       const { data: sale, error: saleError } = await supabase
         .from("sales")
         .insert(saleData)
+        .select()
+        .single();
 
       if (saleError) throw saleError;
+      if (!sale) throw new Error("Failed to create sale record");
 
       // Create sale items with individual discount information
       const saleItems = cart.map((item) => ({
