@@ -77,8 +77,6 @@ const Cashier = () => {
   const [foundSale, setFoundSale] = useState<any>(null);
   const [stockWarningChecked, setStockWarningChecked] = useState(false);
   const [showReorderConfirm, setShowReorderConfirm] = useState(false);
-  
-  // Reorder states
   const [stockConfirmed, setStockConfirmed] = useState(false);
 
   const searchSaleMutation = useMutation({
