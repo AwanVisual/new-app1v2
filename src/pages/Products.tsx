@@ -42,61 +42,96 @@ const Products = () => {
   const canManage = userRole === 'admin' || userRole === 'stockist';
 
   const exportToExcel = () => {
-    if (!products || products.length === 0) {
+    if (!selectedProductHistory) {
       toast({ 
         title: "No Data", 
-        description: "No products to export", 
+        description: "No product selected for export", 
         variant: "destructive" 
       });
       return;
     }
 
-    // Prepare data for Excel export
-    const exportData = products.map(product => ({
-      'Product Name': product.name,
-      'SKU': product.sku,
-      'Category': product.categories?.name || 'No Category',
-      'Base Unit': product.base_unit || 'pcs',
-      'Conversion': `1 ${product.base_unit || 'unit'} = ${product.pcs_per_base_unit || 1} pcs`,
-      'Price per Base Unit': Number(product.price),
-      'Price per Piece': Number(product.price_per_pcs || product.price),
-      'Current Stock (Base Unit)': product.stock_quantity || 0,
-      'Current Stock (Pieces)': product.stock_pcs || 0,
-      'Initial Stock (Base Unit)': product.initial_stock_quantity || 0,
-      'Initial Stock (Pieces)': product.initial_stock_pcs || 0,
-      'Total Added (Pieces)': product.total_stock_added || 0,
-      'Total Reduced (Pieces)': product.total_stock_reduced || 0,
-      'Stock Movements Count': product.stock_movement_count || 0,
-      'Min Stock Level': product.min_stock_level || 10,
-      'Status': (product.stock_pcs || 0) <= (product.min_stock_level || 10) ? 'Low Stock' : 'In Stock',
-      'Description': product.description || '',
-      'Active': product.is_active ? 'Yes' : 'No',
-      'Created At': new Date(product.created_at).toLocaleDateString('id-ID'),
-    }));
+    // Prepare product summary data
+    const productSummary = {
+      'Product Name': selectedProductHistory.name,
+      'SKU': selectedProductHistory.sku,
+      'Category': selectedProductHistory.categories?.name || 'No Category',
+      'Base Unit': selectedProductHistory.base_unit || 'pcs',
+      'Conversion': `1 ${selectedProductHistory.base_unit || 'unit'} = ${selectedProductHistory.pcs_per_base_unit || 1} pcs`,
+      'Price per Base Unit': Number(selectedProductHistory.price),
+      'Price per Piece': Number(selectedProductHistory.price_per_pcs || selectedProductHistory.price),
+      'Current Stock (Base Unit)': selectedProductHistory.stock_quantity || 0,
+      'Current Stock (Pieces)': selectedProductHistory.stock_pcs || 0,
+      'Initial Stock (Base Unit)': selectedProductHistory.initial_stock_quantity || 0,
+      'Initial Stock (Pieces)': selectedProductHistory.initial_stock_pcs || 0,
+      'Total Added (Pieces)': selectedProductHistory.total_stock_added || 0,
+      'Total Reduced (Pieces)': selectedProductHistory.total_stock_reduced || 0,
+      'Stock Movements Count': selectedProductHistory.stock_movement_count || 0,
+      'Min Stock Level': selectedProductHistory.min_stock_level || 10,
+      'Status': (selectedProductHistory.stock_pcs || 0) <= (selectedProductHistory.min_stock_level || 10) ? 'Low Stock' : 'In Stock',
+      'Description': selectedProductHistory.description || '',
+      'Active': selectedProductHistory.is_active ? 'Yes' : 'No',
+      'Created At': new Date(selectedProductHistory.created_at).toLocaleDateString('id-ID'),
+    };
+
+    // Prepare stock movements data
+    const movementsData = stockMovements?.map(movement => ({
+      'Date': new Date(movement.created_at).toLocaleDateString('id-ID', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      'Transaction Type': movement.transaction_type === 'inbound' ? 'Stock In' : 
+                         movement.transaction_type === 'outbound' ? 'Stock Out' : 'Adjustment',
+      'Quantity': movement.quantity,
+      'Unit Type': movement.unit_type === 'pcs' ? 'Pieces' : (selectedProductHistory.base_unit || 'Base Unit'),
+      'Equivalent Pieces': movement.unit_type === 'base_unit' 
+        ? movement.quantity * (selectedProductHistory.pcs_per_base_unit || 1)
+        : movement.quantity,
+      'Reference Number': movement.reference_number || 'N/A',
+      'Notes': movement.notes || '',
+      'Transaction ID': movement.id,
+    })) || [];
 
     // Create workbook and worksheet
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(exportData);
+    
+    // Create product summary sheet
+    const summaryWs = XLSX.utils.json_to_sheet([productSummary]);
+    XLSX.utils.book_append_sheet(wb, summaryWs, 'Product Summary');
+    
+    // Create stock movements sheet if there are movements
+    if (movementsData.length > 0) {
+      const movementsWs = XLSX.utils.json_to_sheet(movementsData);
+      XLSX.utils.book_append_sheet(wb, movementsWs, 'Stock Movements');
+    }
 
     // Auto-size columns
-    const colWidths = Object.keys(exportData[0] || {}).map(key => ({
+    const colWidths = Object.keys(productSummary).map(key => ({
       wch: Math.max(key.length, 15)
     }));
-    ws['!cols'] = colWidths;
-
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'Products');
+    summaryWs['!cols'] = colWidths;
+    
+    if (movementsData.length > 0) {
+      const movementColWidths = Object.keys(movementsData[0]).map(key => ({
+        wch: Math.max(key.length, 15)
+      }));
+      const movementsWs = wb.Sheets['Stock Movements'];
+      movementsWs['!cols'] = movementColWidths;
+    }
 
     // Generate filename with current date
     const currentDate = new Date().toISOString().split('T')[0];
-    const filename = `Products_Export_${currentDate}.xlsx`;
+    const filename = `${selectedProductHistory.name.replace(/[^a-zA-Z0-9]/g, '_')}_History_${currentDate}.xlsx`;
 
     // Save file
     XLSX.writeFile(wb, filename);
 
     toast({
       title: "Export Successful",
-      description: `Products data exported to ${filename}`,
+      description: `${selectedProductHistory.name} history exported to ${filename}`,
     });
   };
 
@@ -899,7 +934,18 @@ const Products = () => {
       <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Stock History - {selectedProductHistory?.name}</DialogTitle>
+            <DialogTitle className="flex items-center justify-between">
+              <span>Stock History - {selectedProductHistory?.name}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportToExcel}
+                disabled={!selectedProductHistory}
+              >
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Export History
+              </Button>
+            </DialogTitle>
           </DialogHeader>
           
           {selectedProductHistory && (
