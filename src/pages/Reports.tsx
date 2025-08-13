@@ -1121,7 +1121,10 @@ const Reports = () => {
                         <label className="text-sm font-medium">Unit Type</label>
                         <Select
                           value={item.unit_type || 'base_unit'}
-                          onValueChange={(value) => updateEditItem(index, 'unit_type', value)}
+                          onValueChange={(value) => {
+                            console.log('Unit type changed:', value, 'from:', item.unit_type);
+                            updateEditItem(index, 'unit_type', value);
+                          }}
                         >
                           <SelectTrigger>
                             <SelectValue />
