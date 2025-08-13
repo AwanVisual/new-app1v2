@@ -68,6 +68,11 @@ const Cashier = () => {
   const [reorderSaleNumber, setReorderSaleNumber] = useState("");
   const [foundSale, setFoundSale] = useState<any>(null);
 
+  const handleSearchSale = () => {};
+const handleConfirmReorder = () => {};
+const searchSaleMutation = { isPending: false };
+
+
   const searchSaleMutation = useMutation({
     mutationFn: async (saleNumber: string) => {
       const { data, error } = await supabase
