@@ -22,14 +22,14 @@ import {
   Calculator,
   Percent,
   Package,
-  RotateCcw,
-  Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import PreCheckoutDialog from "@/components/PreCheckoutDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface CartItem {
@@ -72,9 +72,9 @@ const Cashier = () => {
   const [foundSale, setFoundSale] = useState<any>(null);
   const [useOriginalNumber, setUseOriginalNumber] = useState(false);
   const [stockWarningChecked, setStockWarningChecked] = useState(false);
-  const [isReorderDialogOpen, setIsReorderDialogOpen] = useState(false);
-  const [searchSaleNumber, setSearchSaleNumber] = useState("");
+  const [showReorderConfirm, setShowReorderConfirm] = useState(false);
   const [isConfirmReorderOpen, setIsConfirmReorderOpen] = useState(false);
+  const [stockConfirmed, setStockConfirmed] = useState(false);
 
   const searchSaleMutation = useMutation({
     mutationFn: async (saleNumber: string) => {
@@ -111,10 +111,9 @@ const Cashier = () => {
       });
     },
   });
-  const [showReorderConfirm, setShowReorderConfirm] = useState(false);
 
   const handleSearchSale = () => {
-    if (!searchSaleNumber.trim()) {
+    if (!reorderSaleNumber.trim()) {
       toast({
         title: "Error",
         description: "Masukkan nomor penjualan",
@@ -122,32 +121,37 @@ const Cashier = () => {
       });
       return;
     }
-    searchSaleMutation.mutate(searchSaleNumber.trim());
+    searchSaleMutation.mutate(reorderSaleNumber.trim());
   };
 
   const handleConfirmReorder = () => {
-    if (!foundSale || !foundSale.sale_items) return;
+    if (!foundSale) return;
     
-    // Clear current cart and add items from found sale
-    const newCart: CartItem[] = foundSale.sale_items.map((item: any) => ({
-      product: item.product,
+    // Clear current cart
+    setCart([]);
+    
+    // Add items from found sale to cart
+    const newCartItems: CartItem[] = foundSale.sale_items?.map((item: any) => ({
+      product: item.products,
       quantity: item.quantity,
       unitType: item.unit_type || 'base_unit',
       customDiscount: item.discount || 0,
-    }));
+    })) || [];
     
-    setCart(newCart);
+    setCart(newCartItems);
     setCustomerName(foundSale.customer_name || "");
     
     // Close dialogs
     setIsConfirmReorderOpen(false);
-    setIsReorderDialogOpen(false);
+    setReorderDialogOpen(false);
     setFoundSale(null);
-    setSearchSaleNumber("");
+    setReorderSaleNumber("");
+    setUseOriginalNumber(false);
+    setStockConfirmed(false);
     
     toast({
       title: "Transaksi berhasil disalin",
-      description: `${foundSale.sale_items.length} item telah ditambahkan ke keranjang`,
+      description: `${newCartItems.length} item telah ditambahkan ke keranjang`,
     });
   };
 
@@ -942,55 +946,7 @@ const Cashier = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900">Cashier</h1>
-        <div className="flex gap-2">
-          <Dialog open={isReorderDialogOpen} onOpenChange={setIsReorderDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2">
-                <RotateCcw className="h-4 w-4" />
-                Transaksi Ulang
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Cari Transaksi untuk Diulang</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="saleNumber">Nomor Penjualan</Label>
-                  <Input
-                    id="saleNumber"
-                    value={searchSaleNumber}
-                    onChange={(e) => setSearchSaleNumber(e.target.value)}
-                    placeholder="Masukkan nomor penjualan..."
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSearchSale();
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsReorderDialogOpen(false)}>
-                  Batal
-                </Button>
-                <Button 
-                  onClick={handleSearchSale}
-                  disabled={searchSaleMutation.isPending}
-                >
-                  {searchSaleMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Mencari...
-                    </>
-                  ) : (
-                    'Cari Transaksi'
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          
+        
         {/* Reorder Button */}
         <Dialog open={reorderDialogOpen} onOpenChange={setReorderDialogOpen}>
           <DialogTrigger asChild>
@@ -1024,7 +980,7 @@ const Cashier = () => {
                   Batal
                 </Button>
                 <Button 
-                  //onClick={handleSearchSale}
+                  onClick={handleSearchSale}
                   disabled={searchSaleMutation.isPending}
                 >
                   {searchSaleMutation.isPending ? "Mencari..." : "Cari Transaksi"}
@@ -1033,7 +989,6 @@ const Cashier = () => {
             </div>
           </DialogContent>
         </Dialog>
-        </div>
       </div>
 
       {/* Reorder Confirmation Dialog */}
@@ -1525,6 +1480,31 @@ const Cashier = () => {
                   Keranjang saat ini akan dikosongkan dan diganti dengan item dari transaksi yang dipilih.
                 </p>
               </div>
+
+              {/* Stock Confirmation */}
+              <div className="border border-amber-200 bg-amber-50 rounded-lg p-4">
+                <h3 className="font-semibold text-amber-800 mb-3">⚠️ Konfirmasi Penyesuaian Stok</h3>
+                <div className="space-y-2 text-sm text-amber-700 mb-4">
+                  <p>
+                    <strong>Penting:</strong> Transaksi ulang akan menambahkan item ke keranjang, 
+                    namun <strong>tidak otomatis mengurangi stok</strong> dari sistem.
+                  </p>
+                  <p>
+                    Pastikan untuk <strong>memeriksa dan menyesuaikan stok barang secara manual</strong> 
+                    sesuai dengan kondisi fisik di gudang/toko.
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="stockConfirm" 
+                    checked={stockConfirmed}
+                    onCheckedChange={(checked) => setStockConfirmed(checked as boolean)}
+                  />
+                  <Label htmlFor="stockConfirm" className="text-sm font-medium text-amber-800">
+                    Saya memahami dan akan menyesuaikan stok barang secara manual
+                  </Label>
+                </div>
+              </div>
             </div>
           )}
           
@@ -1535,15 +1515,15 @@ const Cashier = () => {
                 setIsConfirmReorderOpen(false);
                 setFoundSale(null);
                 setUseOriginalNumber(false);
-                setStockWarningChecked(false);
+                setStockConfirmed(false);
               }}
             >
               Batal
             </Button>
             <Button 
               onClick={handleConfirmReorder}
-              disabled={!foundSale || !stockWarningChecked}
-              className={!stockWarningChecked ? "opacity-50 cursor-not-allowed" : ""}
+              disabled={!stockConfirmed}
+              className={!stockConfirmed ? "opacity-50 cursor-not-allowed" : ""}
             >
               Konfirmasi Transaksi Ulang
             </Button>
