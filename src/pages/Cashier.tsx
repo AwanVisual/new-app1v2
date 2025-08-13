@@ -78,6 +78,7 @@ const Cashier = () => {
   const [stockWarningChecked, setStockWarningChecked] = useState(false);
   const [showReorderConfirm, setShowReorderConfirm] = useState(false);
   const [stockConfirmed, setStockConfirmed] = useState(false);
+  const [notes, setNotes] = useState("");
 
   const searchSaleMutation = useMutation({
     mutationFn: async (saleNumber: string) => {
@@ -500,8 +501,6 @@ const Cashier = () => {
         invoice_status: paymentMethod === 'credit' ? 'belum_bayar' : 'lunas',
       };
 
-      
-
       const { data: sale, error: saleError } = await supabase
         .from("sales")
         .insert(saleData)
@@ -903,7 +902,7 @@ const Cashier = () => {
             } catch (e) {
               console.log('Print dialog error:', e);
               toast({
-                title: "Stok Tidak Cukup",
+                title: "Print Error",
                 description: "Please use Ctrl+P or Cmd+P in the opened window to print.",
                 duration: 6000,
               });
