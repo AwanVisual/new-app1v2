@@ -13,10 +13,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Package, Search, Trash2 } from 'lucide-react';
 import { PackagePlus, PackageMinus } from 'lucide-react';
+import { FileSpreadsheet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
 import CategoryInput from '@/components/CategoryInput';
 import { useAuth } from '@/hooks/useAuth';
+import * as XLSX from 'xlsx';
 
 const Products = () => {
   const { userRole, user } = useAuth();
@@ -38,6 +40,65 @@ const Products = () => {
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
 
   const canManage = userRole === 'admin' || userRole === 'stockist';
+
+  const exportToExcel = () => {
+    if (!products || products.length === 0) {
+      toast({ 
+        title: "No Data", 
+        description: "No products to export", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    // Prepare data for Excel export
+    const exportData = products.map(product => ({
+      'Product Name': product.name,
+      'SKU': product.sku,
+      'Category': product.categories?.name || 'No Category',
+      'Base Unit': product.base_unit || 'pcs',
+      'Conversion': `1 ${product.base_unit || 'unit'} = ${product.pcs_per_base_unit || 1} pcs`,
+      'Price per Base Unit': Number(product.price),
+      'Price per Piece': Number(product.price_per_pcs || product.price),
+      'Current Stock (Base Unit)': product.stock_quantity || 0,
+      'Current Stock (Pieces)': product.stock_pcs || 0,
+      'Initial Stock (Base Unit)': product.initial_stock_quantity || 0,
+      'Initial Stock (Pieces)': product.initial_stock_pcs || 0,
+      'Total Added (Pieces)': product.total_stock_added || 0,
+      'Total Reduced (Pieces)': product.total_stock_reduced || 0,
+      'Stock Movements Count': product.stock_movement_count || 0,
+      'Min Stock Level': product.min_stock_level || 10,
+      'Status': (product.stock_pcs || 0) <= (product.min_stock_level || 10) ? 'Low Stock' : 'In Stock',
+      'Description': product.description || '',
+      'Active': product.is_active ? 'Yes' : 'No',
+      'Created At': new Date(product.created_at).toLocaleDateString('id-ID'),
+    }));
+
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+
+    // Auto-size columns
+    const colWidths = Object.keys(exportData[0] || {}).map(key => ({
+      wch: Math.max(key.length, 15)
+    }));
+    ws['!cols'] = colWidths;
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Products');
+
+    // Generate filename with current date
+    const currentDate = new Date().toISOString().split('T')[0];
+    const filename = `Products_Export_${currentDate}.xlsx`;
+
+    // Save file
+    XLSX.writeFile(wb, filename);
+
+    toast({
+      title: "Export Successful",
+      description: `Products data exported to ${filename}`,
+    });
+  };
 
   const { data: products, isLoading } = useQuery({
     queryKey: ['products'],
@@ -288,6 +349,14 @@ const Products = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900">Products</h1>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={exportToExcel}
+            disabled={!products || products.length === 0}
+          >
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            Export to Excel
+          </Button>
           {canManage && <CategoryInput />}
           {canManage && (
             <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
