@@ -64,7 +64,7 @@ const Products = () => {
       if (!selectedProductHistory?.id) return [];
       const { data } = await supabase
         .from('stock_movements')
-        .select('*, profiles(full_name)')
+        .select('*')
         .eq('product_id', selectedProductHistory.id)
         .order('created_at', { ascending: false });
       return data || [];
@@ -971,7 +971,7 @@ const Products = () => {
                             </div>
                             <div>
                               <span className="text-muted-foreground">By:</span>
-                              <div className="font-medium">{movement.profiles?.full_name || 'System'}</div>
+                              <div className="font-medium">System</div>
                             </div>
                           </div>
                           
