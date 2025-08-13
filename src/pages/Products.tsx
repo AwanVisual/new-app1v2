@@ -155,6 +155,7 @@ const Products = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
       setIsStockDialogOpen(false);
       setSelectedProduct(null);
       setStockQuantity(0);
@@ -181,6 +182,7 @@ const Products = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
       setIsReduceStockDialogOpen(false);
       setSelectedProduct(null);
       setReduceStockQuantity(0);
