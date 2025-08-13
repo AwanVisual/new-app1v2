@@ -18,6 +18,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Minus, Plus, Trash2, ShoppingCart, Search, RotateCcw, Loader2, AlertTriangle } from 'lucide-react';
 import PreCheckoutDialog from '@/components/PreCheckoutDialog';
 import MidtransPayment from '@/components/MidtransPayment';
+import jsPDF from 'jspdf';
 
 interface CartItem {
   product: any;
@@ -65,6 +66,11 @@ const Cashier = () => {
   const [useOriginalNumber, setUseOriginalNumber] = useState(false);
   const [stockConfirmationChecked, setStockConfirmationChecked] = useState(false);
 
+  // Auto print and receipt states
+  const [autoPrintEnabled, setAutoPrintEnabled] = useState(false);
+  const [salesPersonName, setSalesPersonName] = useState('');
+  const [globalDiscount, setGlobalDiscount] = useState(0);
+
   // Fetch products
   const { data: products, isLoading: productsLoading } = useQuery({
     queryKey: ['products'],
@@ -93,6 +99,28 @@ const Cashier = () => {
       return data || [];
     },
   });
+
+  // Fetch settings for auto print
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const { data } = await supabase.from('settings').select('*');
+      const settingsObject = data
+        ? data.reduce((obj: any, item: any) => {
+            obj[item.key] = item.value;
+            return obj;
+          }, {})
+        : {};
+      return settingsObject || {};
+    },
+  });
+
+  // Set auto print from settings
+  useEffect(() => {
+    if (settings?.print_receipt_auto === 'true') {
+      setAutoPrintEnabled(true);
+    }
+  }, [settings]);
 
   // Search sale mutation
   const searchSaleMutation = useMutation({
@@ -162,9 +190,16 @@ const Cashier = () => {
       queryClient.invalidateQueries({ queryKey: ['sales'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       
+      // Auto print receipt if enabled
+      if (autoPrintEnabled || settings?.print_receipt_auto === 'true') {
+        printReceipt(sale);
+      }
+      
       setCart([]);
       setCustomerName('');
       setPaymentReceived(0);
+      setSalesPersonName('');
+      setGlobalDiscount(0);
       setReceiptConfig({
         showAmount: true,
         showDppFaktur: false,
@@ -306,8 +341,97 @@ const Cashier = () => {
   };
 
   const totals = calculateTotals();
-  const change = paymentReceived - totals.total;
+  
+  // Apply global discount
+  const globalDiscountAmount = (globalDiscount / 100) * totals.total;
+  const finalTotal = totals.total - globalDiscountAmount;
+  const totalDiscount = totals.discount + globalDiscountAmount;
+  
+  const change = paymentReceived - finalTotal;
 
+  // Print receipt function
+  const printReceipt = (saleData: any) => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(16);
+    doc.text(settings?.store_name || 'AWANVISUAL POS', 105, 20, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text(settings?.store_address || '', 105, 30, { align: 'center' });
+    doc.text(settings?.store_phone || '', 105, 35, { align: 'center' });
+    
+    // Receipt info
+    doc.text(`No: ${saleData.sale_number}`, 20, 50);
+    doc.text(`Tanggal: ${new Date().toLocaleDateString('id-ID')}`, 20, 55);
+    doc.text(`Kasir: ${salesPersonName || user?.email || 'Admin'}`, 20, 60);
+    if (customerName) {
+      doc.text(`Pelanggan: ${customerName}`, 20, 65);
+    }
+    
+    // Items
+    let yPos = 80;
+    doc.text('Item', 20, yPos);
+    doc.text('Qty', 80, yPos);
+    doc.text('Harga', 110, yPos);
+    doc.text('Total', 150, yPos);
+    yPos += 5;
+    doc.line(20, yPos, 190, yPos);
+    yPos += 10;
+    
+    cart.forEach((item) => {
+      const price = Number(item.product.price);
+      const discountAmount = (item.customDiscount / 100) * price;
+      const discountedPrice = price - discountAmount;
+      const itemTotal = discountedPrice * item.quantity;
+      
+      doc.text(item.product.name, 20, yPos);
+      doc.text(item.quantity.toString(), 80, yPos);
+      doc.text(formatCurrency(discountedPrice), 110, yPos);
+      doc.text(formatCurrency(itemTotal), 150, yPos);
+      yPos += 8;
+      
+      if (item.customDiscount > 0) {
+        doc.text(`  Diskon ${item.customDiscount}%`, 20, yPos);
+        yPos += 6;
+      }
+    });
+    
+    // Totals
+    yPos += 10;
+    doc.line(20, yPos, 190, yPos);
+    yPos += 10;
+    
+    doc.text(`Subtotal: ${formatCurrency(totals.subtotal)}`, 110, yPos);
+    yPos += 8;
+    
+    if (totalDiscount > 0) {
+      doc.text(`Diskon: ${formatCurrency(totalDiscount)}`, 110, yPos);
+      yPos += 8;
+    }
+    
+    doc.setFontSize(12);
+    doc.text(`TOTAL: ${formatCurrency(finalTotal)}`, 110, yPos);
+    yPos += 10;
+    
+    if (paymentMethod === 'cash') {
+      doc.setFontSize(10);
+      doc.text(`Bayar: ${formatCurrency(paymentReceived)}`, 110, yPos);
+      yPos += 8;
+      doc.text(`Kembali: ${formatCurrency(Math.max(0, change))}`, 110, yPos);
+    }
+    
+    // Footer
+    yPos += 20;
+    doc.text(settings?.receipt_footer || 'Terima kasih atas kunjungan Anda!', 105, yPos, { align: 'center' });
+    
+    // Print or download
+    if (autoPrintEnabled) {
+      doc.autoPrint();
+      window.open(doc.output('bloburl'), '_blank');
+    } else {
+      doc.save(`receipt-${saleData.sale_number}.pdf`);
+    }
+  };
   // Handle checkout
   const handleCheckout = () => {
     if (cart.length === 0) {
@@ -371,6 +495,7 @@ const Cashier = () => {
       change_amount: change > 0 ? change : 0,
       created_by: user?.id,
       cashier_id: user?.id,
+      notes: salesPersonName ? `Sales: ${salesPersonName}` : null,
     };
 
     createSaleMutation.mutate(saleData);
@@ -550,12 +675,18 @@ const Cashier = () => {
                     {totals.discount > 0 && (
                       <div className="flex justify-between text-red-600">
                         <span>Diskon:</span>
-                        <span>-{formatCurrency(totals.discount)}</span>
+                        <span>-{formatCurrency(totalDiscount)}</span>
+                      </div>
+                    )}
+                    {globalDiscount > 0 && (
+                      <div className="flex justify-between text-red-600">
+                        <span>Diskon Global ({globalDiscount}%):</span>
+                        <span>-{formatCurrency(globalDiscountAmount)}</span>
                       </div>
                     )}
                     <div className="flex justify-between font-bold text-lg">
                       <span>Total:</span>
-                      <span>{formatCurrency(totals.total)}</span>
+                      <span>{formatCurrency(finalTotal)}</span>
                     </div>
                   </div>
                 </>
@@ -576,6 +707,30 @@ const Cashier = () => {
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   placeholder="Masukkan nama pelanggan"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="salesPersonName">Nama Sales (Opsional)</Label>
+                <Input
+                  id="salesPersonName"
+                  value={salesPersonName}
+                  onChange={(e) => setSalesPersonName(e.target.value)}
+                  placeholder="Masukkan nama sales"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="globalDiscount">Diskon Global (%)</Label>
+                <Input
+                  id="globalDiscount"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={globalDiscount}
+                  onChange={(e) => setGlobalDiscount(Number(e.target.value))}
+                  placeholder="0"
                 />
               </div>
 
@@ -616,6 +771,15 @@ const Cashier = () => {
                   )}
                 </>
               )}
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="autoPrint"
+                  checked={autoPrintEnabled}
+                  onCheckedChange={setAutoPrintEnabled}
+                />
+                <Label htmlFor="autoPrint">Auto Print Receipt</Label>
+              </div>
 
               <Button
                 onClick={handleCheckout}
