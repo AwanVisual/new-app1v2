@@ -451,9 +451,15 @@ const Cashier = () => {
         }),
         invoice_status: paymentMethod === 'credit' ? 'belum_bayar' : 'lunas',
       };
-
+          sale_number: saleNumber,
+      if (saleData.useOriginalNumber && saleData.originalSaleNumber) {
+        saleNumber = saleData.originalSaleNumber;
+      } else {
+        const { data } = await supabase.rpc('generate_sale_number');
+        saleNumber = data;
+      }
       
-
+          created_by: user?.id,
       const { data: sale, error: saleError } = await supabase
         .from("sales")
         .insert(saleData)
