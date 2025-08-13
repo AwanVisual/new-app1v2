@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { BarChart3, Download, FileText, Calendar, DollarSign, TrendingUp, Package, Edit, RotateCcw } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { BarChart3, Download, TrendingUp, Package, ShoppingCart, Calendar, Edit, Printer, Save, X, Minus, Plus } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
@@ -24,10 +24,6 @@ const Reports = () => {
   const [editingItems, setEditingItems] = useState<string | null>(null);
   const [editItemsData, setEditItemsData] = useState<any[]>([]);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isReorderDialogOpen, setIsReorderDialogOpen] = useState(false);
-  const [reorderSaleNumber, setReorderSaleNumber] = useState('');
-  const [reorderData, setReorderData] = useState<any>(null);
-  const [isReorderConfirmOpen, setIsReorderConfirmOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [selectedSale, setSelectedSale] = useState<any>(null);
 
