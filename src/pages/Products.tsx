@@ -62,14 +62,22 @@ const Products = () => {
     queryKey: ['stock-movements', selectedProductHistory?.id],
     queryFn: async () => {
       if (!selectedProductHistory?.id) return [];
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('stock_movements')
         .select('*')
         .eq('product_id', selectedProductHistory.id)
         .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching stock movements:', error);
+        return [];
+      }
+      
       return data || [];
     },
     enabled: !!selectedProductHistory?.id,
+    refetchOnWindowFocus: false,
+    staleTime: 30000, // Cache for 30 seconds
   });
 
   const createProductMutation = useMutation({
@@ -890,9 +898,29 @@ const Products = () => {
               {/* Stock Movement History */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Stock Movement History</CardTitle>
+                  <CardTitle className="text-lg">
+                    Stock Movement History ({stockMovements?.length || 0} movements)
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
+                  <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                    <h4 className="font-medium text-blue-800 mb-2">Product: {selectedProductHistory?.name}</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-blue-600">SKU:</span> {selectedProductHistory?.sku}
+                      </div>
+                      <div>
+                        <span className="text-blue-600">Base Unit:</span> {selectedProductHistory?.base_unit || 'pcs'}
+                      </div>
+                      <div>
+                        <span className="text-blue-600">Conversion:</span> 1 {selectedProductHistory?.base_unit} = {selectedProductHistory?.pcs_per_base_unit || 1} pcs
+                      </div>
+                      <div>
+                        <span className="text-blue-600">Total Movements:</span> {selectedProductHistory?.stock_movement_count || 0}
+                      </div>
+                    </div>
+                  </div>
+                  
                   {stockMovements && stockMovements.length > 0 ? (
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                       {stockMovements.map((movement) => (
@@ -935,12 +963,12 @@ const Products = () => {
                                 movement.transaction_type === 'inbound' ? 'text-green-600' : 'text-red-600'
                               }`}>
                                 {movement.transaction_type === 'inbound' ? '+' : '-'}
-                                {movement.quantity} {movement.unit_type === 'pcs' ? 'pcs' : selectedProductHistory.base_unit}
+                                {movement.quantity} {movement.unit_type === 'pcs' ? 'pcs' : (selectedProductHistory?.base_unit || 'units')}
                               </div>
-                              {movement.unit_type === 'base_unit' && selectedProductHistory.pcs_per_base_unit > 1 && (
+                              {movement.unit_type === 'base_unit' && (selectedProductHistory?.pcs_per_base_unit || 1) > 1 && (
                                 <div className="text-sm text-muted-foreground">
                                   ({movement.transaction_type === 'inbound' ? '+' : '-'}
-                                  {movement.quantity * (selectedProductHistory.pcs_per_base_unit || 1)} pcs)
+                                  {movement.quantity * (selectedProductHistory?.pcs_per_base_unit || 1)} pcs)
                                 </div>
                               )}
                             </div>
@@ -955,6 +983,14 @@ const Products = () => {
                               <span className="text-muted-foreground">By:</span>
                               <div className="font-medium">System</div>
                             </div>
+                            <div>
+                              <span className="text-muted-foreground">Unit Type:</span>
+                              <div className="font-medium capitalize">{movement.unit_type || 'base_unit'}</div>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Transaction ID:</span>
+                              <div className="font-mono text-xs">{movement.id.slice(0, 8)}...</div>
+                            </div>
                           </div>
                           
                           {movement.notes && (
@@ -967,9 +1003,19 @@ const Products = () => {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-8 text-muted-foreground">
+                    <div className="text-center py-12 text-muted-foreground">
                       <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No stock movements recorded yet</p>
+                      <p className="text-lg font-medium">No stock movements recorded yet</p>
+                      <p className="text-sm mt-2">Stock movements will appear here when you add or reduce stock</p>
+                      <div className="mt-4 p-3 bg-gray-50 rounded-lg text-left max-w-md mx-auto">
+                        <p className="text-sm font-medium mb-2">Expected movements:</p>
+                        <ul className="text-xs space-y-1">
+                          <li>• Initial stock when product was created</li>
+                          <li>• Manual stock additions</li>
+                          <li>• Manual stock reductions</li>
+                          <li>• Sales transactions (automatic)</li>
+                        </ul>
+                      </div>
                     </div>
                   )}
                 </CardContent>
