@@ -1373,7 +1373,7 @@ const Reports = () => {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          {movement.unit_type || 'base_unit'}
+                          {movement.unit_type === 'pcs' ? 'pcs' : (movement.products?.base_unit || 'base_unit')}
                         </Badge>
                       </TableCell>
                       <TableCell>{movement.reference_number || '-'}</TableCell>
