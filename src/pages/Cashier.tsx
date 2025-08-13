@@ -47,7 +47,6 @@ interface ReceiptFieldsConfig {
 
 const Cashier = () => {
   const { user } = useAuth();
-  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -63,12 +62,6 @@ const Cashier = () => {
     showPpn11: false,
     discountPercentage: 0,
     useSpecialCustomerCalculation: false,
-  
-  // Reorder states
-  const [isReorderDialogOpen, setIsReorderDialogOpen] = useState(false);
-  const [isConfirmReorderOpen, setIsConfirmReorderOpen] = useState(false);
-  const [searchSaleNumber, setSearchSaleNumber] = useState('');
-  const [foundSale, setFoundSale] = useState<any>(null);
   });
   const [selectedCashier, setSelectedCashier] = useState<string>("");
   const [reorderDialogOpen, setReorderDialogOpen] = useState(false);
@@ -1375,6 +1368,91 @@ const Cashier = () => {
         onCartUpdate={setCart}
         onProceedToPayment={handlePreCheckoutProceed}
       />
+      
+      {/* Confirm Reorder Dialog */}
+      <Dialog open={isConfirmReorderOpen} onOpenChange={setIsConfirmReorderOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Transaksi Ulang</DialogTitle>
+          </DialogHeader>
+          
+          {foundSale && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <Label className="text-sm font-medium">Nomor Penjualan:</Label>
+                  <p className="font-mono">{foundSale.sale_number}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Customer:</Label>
+                  <p>{foundSale.customer_name || 'Walk-in Customer'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Tanggal:</Label>
+                  <p>{new Date(foundSale.created_at).toLocaleDateString('id-ID')}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Total:</Label>
+                  <p className="font-bold text-green-600">
+                    {formatCurrency(Number(foundSale.total_amount))}
+                  </p>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Item Transaksi:</Label>
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Produk</TableHead>
+                        <TableHead>Qty</TableHead>
+                        <TableHead>Harga</TableHead>
+                        <TableHead>Discount</TableHead>
+                        <TableHead>Subtotal</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {foundSale.sale_items?.map((item: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell>{item.products?.name || 'Unknown Product'}</TableCell>
+                          <TableCell>{item.quantity}</TableCell>
+                          <TableCell>{formatCurrency(Number(item.unit_price))}</TableCell>
+                          <TableCell>{item.discount || 0}%</TableCell>
+                          <TableCell>{formatCurrency(Number(item.subtotal))}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Perhatian:</strong> Transaksi ini akan disalin ke keranjang belanja. 
+                  Keranjang saat ini akan dikosongkan dan diganti dengan item dari transaksi yang dipilih.
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsConfirmReorderOpen(false);
+                setFoundSale(null);
+                setSearchSaleNumber('');
+              }}
+            >
+              Batal
+            </Button>
+            <Button onClick={handleConfirmReorder}>
+              Ya, Buat Transaksi Ulang
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
