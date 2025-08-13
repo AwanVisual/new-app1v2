@@ -97,7 +97,7 @@ const Reports = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from('stock_movements')
-        .select('*, products(name, sku)')
+        .select('*, products(name, base_unit)')
         .gte('created_at', start.toISOString())
         .lt('created_at', end.toISOString())
         .order('created_at', { ascending: false });
