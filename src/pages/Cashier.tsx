@@ -76,7 +76,6 @@ const Cashier = () => {
   const [isConfirmReorderOpen, setIsConfirmReorderOpen] = useState(false);
   const [stockConfirmed, setStockConfirmed] = useState(false);
 
-  // Search sale mutation for reorder
   const searchSaleMutation = useMutation({
     mutationFn: async (saleNumber: string) => {
       const { data, error } = await supabase
@@ -85,7 +84,7 @@ const Cashier = () => {
           *,
           sale_items (
             *,
-            products (*)
+            product:products (*)
           )
         `)
         .eq('sale_number', saleNumber)
@@ -96,72 +95,63 @@ const Cashier = () => {
     },
     onSuccess: (data) => {
       setFoundSale(data);
-      setIsReorderDialogOpen(false);
       setIsConfirmReorderOpen(true);
+      toast({
+        title: "Transaksi ditemukan",
+        description: `Transaksi ${data.sale_number} berhasil ditemukan`,
+      });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Nomor penjualan tidak ditemukan",
-        variant: "destructive"
+        description: error.message === 'No rows returned' 
+          ? "Nomor penjualan tidak ditemukan" 
+          : error.message,
+        variant: "destructive",
       });
-    }
+    },
   });
 
   const handleSearchSale = () => {
-    if (!searchSaleNumber.trim()) {
+    if (!reorderSaleNumber.trim()) {
       toast({
         title: "Error",
         description: "Masukkan nomor penjualan",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
-    searchSaleMutation.mutate(searchSaleNumber);
+    searchSaleMutation.mutate(reorderSaleNumber.trim());
   };
 
   const handleConfirmReorder = () => {
-    if (!stockConfirmed) {
-      toast({
-        title: "Peringatan",
-        description: "Harap konfirmasi penyesuaian stok terlebih dahulu",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!foundSale || !foundSale.sale_items) {
-      toast({
-        title: "Error",
-        description: "Data transaksi tidak valid",
-        variant: "destructive"
-      });
-      return;
-    }
-
+    if (!foundSale) return;
+    
     // Clear current cart
     setCart([]);
     
     // Add items from found sale to cart
-    const newCartItems: CartItem[] = foundSale.sale_items.map((item: any) => ({
+    const newCartItems: CartItem[] = foundSale.sale_items?.map((item: any) => ({
       product: item.products,
       quantity: item.quantity,
-      customDiscount: item.discount || 0
-    }));
+      unitType: item.unit_type || 'base_unit',
+      customDiscount: item.discount || 0,
+    })) || [];
     
     setCart(newCartItems);
-    setCustomerName(foundSale.customer_name || '');
+    setCustomerName(foundSale.customer_name || "");
     
-    // Close dialogs and reset states
+    // Close dialogs
     setIsConfirmReorderOpen(false);
+    setReorderDialogOpen(false);
     setFoundSale(null);
-    setSearchSaleNumber('');
+    setReorderSaleNumber("");
     setUseOriginalNumber(false);
     setStockConfirmed(false);
     
     toast({
-      title: "Berhasil",
-      description: "Transaksi berhasil dibuat ulang",
+      title: "Transaksi berhasil disalin",
+      description: `${newCartItems.length} item telah ditambahkan ke keranjang`,
     });
   };
 
@@ -329,7 +319,7 @@ const Cashier = () => {
     return productUnits?.filter(unit => unit.product_id === productId) || [];
   };
 
-  const addToCart = (product: any, selectedUnit: string = 'base_unit') => {
+  const addToCart = (product: any) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       
