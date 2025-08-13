@@ -1328,6 +1328,7 @@ const Reports = () => {
                     <TableHead>Product</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Quantity</TableHead>
+                    <TableHead>Unit Type</TableHead>
                     <TableHead>Reference</TableHead>
                     <TableHead>Notes</TableHead>
                   </TableRow>
@@ -1367,6 +1368,11 @@ const Reports = () => {
                            movement.transaction_type === 'outbound' ? '-' : ''}
                           {movement.quantity}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {movement.unit_type === 'pcs' ? 'pcs' : (movement.products?.base_unit || 'unit')}
+                        </Badge>
                       </TableCell>
                       <TableCell>{movement.reference_number || '-'}</TableCell>
                       <TableCell>{movement.notes || '-'}</TableCell>
