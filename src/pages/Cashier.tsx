@@ -67,6 +67,42 @@ const Cashier = () => {
   const [reorderDialogOpen, setReorderDialogOpen] = useState(false);
   const [reorderSaleNumber, setReorderSaleNumber] = useState("");
   const [foundSale, setFoundSale] = useState<any>(null);
+
+  const searchSaleMutation = useMutation({
+    mutationFn: async (saleNumber: string) => {
+      const { data, error } = await supabase
+        .from('sales')
+        .select(`
+          *,
+          sale_items (
+            *,
+            product:products (*)
+          )
+        `)
+        .eq('sale_number', saleNumber)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      setFoundSale(data);
+      setIsConfirmReorderOpen(true);
+      toast({
+        title: "Transaksi ditemukan",
+        description: `Transaksi ${data.sale_number} berhasil ditemukan`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message === 'No rows returned' 
+          ? "Nomor penjualan tidak ditemukan" 
+          : error.message,
+        variant: "destructive",
+      });
+    },
+  });
   const [showReorderConfirm, setShowReorderConfirm] = useState(false);
 
   // Update payment received when payment method changes
