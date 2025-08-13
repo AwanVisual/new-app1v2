@@ -68,9 +68,7 @@ const Cashier = () => {
   const [reorderSaleNumber, setReorderSaleNumber] = useState("");
   const [foundSale, setFoundSale] = useState<any>(null);
 
-  const handleSearchSale = () => {};
-const handleConfirmReorder = () => {};
-const searchSaleMutation = { isPending: false };
+
 
 
   const searchSaleMutation = useMutation({
@@ -935,7 +933,7 @@ const searchSaleMutation = { isPending: false };
                   Batal
                 </Button>
                 <Button 
-                  onClick={handleSearchSale}
+                  //onClick={handleSearchSale}
                   disabled={searchSaleMutation.isPending}
                 >
                   {searchSaleMutation.isPending ? "Mencari..." : "Cari Transaksi"}
