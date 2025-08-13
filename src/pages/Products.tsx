@@ -141,7 +141,7 @@ const Products = () => {
     // Create workbook
     const wb = XLSX.utils.book_new();
     
-    // Create data array with sections
+    // Create single sheet with all information
     const data = [];
     
     // Initial Stock Information
@@ -153,6 +153,8 @@ const Products = () => {
     data.push(['Pieces per Base Unit', product.pcs_per_base_unit || 1]);
     data.push(['Initial Stock (Base Unit)', product.initial_stock_quantity || 0]);
     data.push(['Initial Stock (Pieces)', product.initial_stock_pcs || 0]);
+    data.push(['Price per Base Unit', formatCurrency(Number(product.price))]);
+    data.push(['Price per Piece', formatCurrency(Number(product.price_per_pcs || product.price))]);
     data.push(['Min Stock Level', product.min_stock_level || 10]);
     data.push(['Created Date', new Date(product.created_at).toLocaleDateString('id-ID')]);
     data.push(['']); // Empty row
@@ -164,16 +166,17 @@ const Products = () => {
     data.push(['Total Stock Added', product.total_stock_added || 0]);
     data.push(['Total Stock Reduced', product.total_stock_reduced || 0]);
     data.push(['Total Movements', product.stock_movement_count || 0]);
-    data.push(['Last Updated', new Date(product.updated_at).toLocaleDateString('id-ID')]);
     data.push(['Status', product.is_active ? 'Active' : 'Inactive']);
+    data.push(['Last Updated', new Date(product.updated_at).toLocaleDateString('id-ID')]);
     data.push(['']); // Empty row
     
-    // Stock Movement History Header
+    // Stock Movement History
     data.push(['STOCK MOVEMENT HISTORY']);
     data.push(['Date', 'Type', 'Quantity', 'Unit', 'Reference', 'Notes', 'Created By']);
     
-    // Add movement data
-    if (movements.length > 0) {
+    if (movements.length === 0) {
+      data.push(['No stock movements recorded', '', '', '', '', '', '']);
+    } else {
       movements.forEach(movement => {
         data.push([
           new Date(movement.created_at).toLocaleDateString('id-ID'),
@@ -183,39 +186,38 @@ const Products = () => {
           movement.unit_type === 'pcs' ? 'pcs' : (product.base_unit || 'unit'),
           movement.reference_number || '-',
           movement.notes || '-',
-          'User' // You might want to join with user data for actual name
+          'User' // Could be enhanced to show actual user name
         ]);
       });
-    } else {
-      data.push(['No stock movements recorded', '', '', '', '', '', '']);
     }
     
     // Create worksheet
     const ws = XLSX.utils.aoa_to_sheet(data);
     
-    // Set column widths
-    ws['!cols'] = [
-      { wch: 25 }, // Column A - wider for labels/dates
-      { wch: 15 }, // Column B
-      { wch: 12 }, // Column C
-      { wch: 10 }, // Column D
-      { wch: 15 }, // Column E
-      { wch: 20 }, // Column F
-      { wch: 15 }  // Column G
+    // Auto-size columns
+    const colWidths = [
+      { wch: 25 }, // Column A - Labels/Date
+      { wch: 20 }, // Column B - Values/Type
+      { wch: 15 }, // Column C - Quantity
+      { wch: 10 }, // Column D - Unit
+      { wch: 20 }, // Column E - Reference
+      { wch: 30 }, // Column F - Notes
+      { wch: 15 }  // Column G - Created By
     ];
+    ws['!cols'] = colWidths;
     
+    // Add worksheet to workbook
     XLSX.utils.book_append_sheet(wb, ws, 'Product History');
     
     // Generate filename
-    const currentDate = new Date().toISOString().split('T')[0];
-    const filename = `${product.name.replace(/[^a-zA-Z0-9]/g, '_')}_History_${currentDate}.xlsx`;
+    const filename = `${product.name.replace(/[^a-zA-Z0-9]/g, '_')}_History_${new Date().toISOString().split('T')[0]}.xlsx`;
     
     // Save file
     XLSX.writeFile(wb, filename);
     
     toast({
       title: "Export Successful",
-      description: `${product.name} history exported to ${filename}`,
+      description: `${product.name} history exported successfully`,
     });
   };
 
