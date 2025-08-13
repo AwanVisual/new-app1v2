@@ -11,8 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Package, Search, Trash2 } from 'lucide-react';
-import { PackagePlus, PackageMinus } from 'lucide-react';
+import { Plus, Edit, Package, Search, Trash2, PackagePlus, PackageMinus, History, TrendingUp, TrendingDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
 import CategoryInput from '@/components/CategoryInput';
@@ -34,6 +33,7 @@ const Products = () => {
   const [reduceStockUnitType, setReduceStockUnitType] = useState<'pcs' | 'base_unit'>('base_unit');
   const [stockNotes, setStockNotes] = useState('');
   const [reduceStockNotes, setReduceStockNotes] = useState('');
+  const [showStockHistory, setShowStockHistory] = useState<string | null>(null);
 
   const canManage = userRole === 'admin' || userRole === 'stockist';
 
@@ -54,6 +54,22 @@ const Products = () => {
       const { data } = await supabase.from('categories').select('*');
       return data || [];
     },
+  });
+
+  const { data: stockMovements } = useQuery({
+    queryKey: ['stock-movements', showStockHistory],
+    queryFn: async () => {
+      if (!showStockHistory) return [];
+      
+      const { data } = await supabase
+        .from('stock_movements')
+        .select('*')
+        .eq('product_id', showStockHistory)
+        .order('created_at', { ascending: false });
+      
+      return data || [];
+    },
+    enabled: !!showStockHistory,
   });
 
   const createProductMutation = useMutation({
@@ -497,7 +513,6 @@ const Products = () => {
                 <TableHead>Base Unit</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Stock</TableHead>
-               <TableHead>Stock History</TableHead>
                 <TableHead>Status</TableHead>
                 {canManage && <TableHead>Actions</TableHead>}
               </TableRow>
@@ -526,32 +541,17 @@ const Products = () => {
                           ({product.stock_pcs || 0} pcs)
                         </span>
                       )}
-                     <div className="text-xs text-blue-600 ml-2">
-                       Initial: {product.initial_stock_pcs || 0} pcs
-                     </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowStockHistory(product.id)}
+                        className="h-6 px-2 text-xs"
+                      >
+                        <History className="h-3 w-3 mr-1" />
+                        History
+                      </Button>
                     </div>
-                   <div className="text-xs text-muted-foreground mt-1">
-                     Added: {product.total_stock_added || 0} pcs | 
-                     Reduced: {product.total_stock_reduced || 0} pcs | 
-                     Movements: {product.stock_movement_count || 0}x
-                   </div>
                   </TableCell>
-                 <TableCell>
-                   <div className="space-y-1">
-                     <div className="text-sm">
-                       <span className="text-blue-600">Initial:</span> {product.initial_stock_quantity || 0} {product.base_unit || 'units'}
-                     </div>
-                     <div className="text-sm">
-                       <span className="text-green-600">+Added:</span> {product.total_stock_added || 0} pcs
-                     </div>
-                     <div className="text-sm">
-                       <span className="text-red-600">-Reduced:</span> {product.total_stock_reduced || 0} pcs
-                     </div>
-                     <div className="text-xs text-muted-foreground">
-                       {product.stock_movement_count || 0} movements total
-                     </div>
-                   </div>
-                 </TableCell>
                   <TableCell>
                     <Badge
                       variant={
@@ -797,6 +797,149 @@ const Products = () => {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stock History Dialog */}
+      <Dialog open={!!showStockHistory} onOpenChange={() => setShowStockHistory(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Stock History - {products?.find(p => p.id === showStockHistory)?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {showStockHistory && (
+            <div className="space-y-4">
+              {/* Stock Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Stock Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {(() => {
+                    const product = products?.find(p => p.id === showStockHistory);
+                    return (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">
+                            {product?.initial_stock_pcs || 0}
+                          </div>
+                          <div className="text-sm text-muted-foreground">Initial Stock (pcs)</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">
+                            +{product?.total_stock_added || 0}
+                          </div>
+                          <div className="text-sm text-muted-foreground">Total Added (pcs)</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-red-600">
+                            -{product?.total_stock_reduced || 0}
+                          </div>
+                          <div className="text-sm text-muted-foreground">Total Reduced (pcs)</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold">
+                            {product?.stock_movement_count || 0}
+                          </div>
+                          <div className="text-sm text-muted-foreground">Total Movements</div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+
+              {/* Movement History */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Movement History</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Unit</TableHead>
+                        <TableHead>Reference</TableHead>
+                        <TableHead>Notes</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {stockMovements?.map((movement) => (
+                        <TableRow key={movement.id}>
+                          <TableCell>
+                            {new Date(movement.created_at!).toLocaleDateString('id-ID', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              {movement.transaction_type === 'inbound' && (
+                                <>
+                                  <TrendingUp className="h-4 w-4 text-green-600" />
+                                  <Badge className="bg-green-100 text-green-800">Stock In</Badge>
+                                </>
+                              )}
+                              {movement.transaction_type === 'outbound' && (
+                                <>
+                                  <TrendingDown className="h-4 w-4 text-red-600" />
+                                  <Badge className="bg-red-100 text-red-800">Stock Out</Badge>
+                                </>
+                              )}
+                              {movement.transaction_type === 'adjustment' && (
+                                <>
+                                  <History className="h-4 w-4 text-blue-600" />
+                                  <Badge className="bg-blue-100 text-blue-800">Adjustment</Badge>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className={`font-medium ${
+                              movement.transaction_type === 'inbound' ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {movement.transaction_type === 'inbound' ? '+' : '-'}{movement.quantity}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {movement.unit_type === 'pcs' ? 'pcs' : 
+                                products?.find(p => p.id === showStockHistory)?.base_unit || 'unit'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {movement.reference_number || '-'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm text-muted-foreground">
+                              {movement.notes || '-'}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  
+                  {stockMovements?.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No stock movements found for this product
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
