@@ -26,34 +26,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          setTimeout(async () => {
-            try {
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('role')
-                .eq('id', session.user.id)
-                .single();
-              
-              setUserRole(profile?.role || null);
-            } catch (error) {
-              console.error('Error fetching user role:', error);
-            }
-          }, 0);
-        } else {
-          setUserRole(null);
+        try {
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          if (session?.user) {
+            setTimeout(async () => {
+              try {
+                const { data: profile } = await supabase
+                  .from('profiles')
+                  .select('role')
+                  .eq('id', session.user.id)
+                  .single();
+                
+                setUserRole(profile?.role || null);
+              } catch (error) {
+                console.error('Error fetching user role:', error);
+                // If we can't fetch the user role, sign out to clear invalid session
+                await signOut();
+              }
+            }, 0);
+          } else {
+            setUserRole(null);
+          }
+        } catch (error) {
+          console.error('Auth state change error:', error);
+          // Clear invalid session data
+          await signOut();
         }
         
         setLoading(false);
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    // Handle initial session with error handling
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('Error getting session:', error);
+        // Clear any invalid session data
+        signOut();
+      } else {
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
+      setLoading(false);
+    }).catch(async (error) => {
+      console.error('Session retrieval failed:', error);
+      // Clear invalid session data
+      await signOut();
       setLoading(false);
     });
 
