@@ -410,10 +410,13 @@ const Reports = () => {
           // Logo is wider - fit to width
           logoWidth = Math.min(maxLogoWidth, maxLogoHeight * aspectRatio);
           logoHeight = logoWidth / aspectRatio;
+      // Calculate new subtotal based on unit type and quantity
+      const newSubtotal = (updates.unit_price || 0) * (updates.quantity || 1);
         } else {
           // Logo is taller or square - fit to height
           logoHeight = Math.min(maxLogoHeight, maxLogoWidth / aspectRatio);
           logoWidth = logoHeight * aspectRatio;
+          subtotal: newSubtotal
         }
 
         pdf.addImage(logoUrl, 'PNG', leftMargin, yPosition, logoWidth, logoHeight, undefined, 'FAST');
