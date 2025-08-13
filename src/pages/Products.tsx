@@ -227,7 +227,7 @@ const Products = () => {
       price_per_pcs: parseFloat(formData.get('price_per_pcs') as string),
       cost: parseFloat(formData.get('price_per_pcs') as string), // Use price_per_pcs as cost for now
       stock_quantity: stockQuantity,
-      stock_pcs: calculatedStockPcs,
+      stock_pcs: parseInt(formData.get('stock_pcs') as string),
       min_stock_level: parseInt(formData.get('min_stock_level') as string),
       description: formData.get('description') as string,
       base_unit: formData.get('base_unit') as string,
@@ -376,9 +376,9 @@ const Products = () => {
                         onChange={(e) => {
                           const pcsPerUnit = Number(e.target.value) || 1;
                           const stockQty = Number((document.getElementById('stock_quantity') as HTMLInputElement)?.value) || 0;
-                          const stockPcsDisplay = document.getElementById('stock-pcs-display');
-                          if (stockPcsDisplay) {
-                            stockPcsDisplay.textContent = `${stockQty * pcsPerUnit} pcs`;
+                          const stockPcsInput = document.getElementById('stock_pcs') as HTMLInputElement;
+                          if (stockPcsInput) {
+                            stockPcsInput.value = (stockQty * pcsPerUnit).toString();
                           }
                         }}
                         required
@@ -402,9 +402,9 @@ const Products = () => {
                         onChange={(e) => {
                           const stockQty = Number(e.target.value) || 0;
                           const pcsPerUnit = Number((document.getElementById('pcs_per_base_unit') as HTMLInputElement)?.value) || 1;
-                          const stockPcsDisplay = document.getElementById('stock-pcs-display');
-                          if (stockPcsDisplay) {
-                            stockPcsDisplay.textContent = `${stockQty * pcsPerUnit} pcs`;
+                          const stockPcsInput = document.getElementById('stock_pcs') as HTMLInputElement;
+                          if (stockPcsInput) {
+                            stockPcsInput.value = (stockQty * pcsPerUnit).toString();
                           }
                         }}
                         required
@@ -414,20 +414,25 @@ const Products = () => {
                       </p>
                     </div>
                     <div>
-                      <Label>Stock in Pieces (Calculated)</Label>
-                      <div className="h-10 px-3 py-2 border rounded-md bg-gray-50 flex items-center" id="calculated-stock-pcs">
-                        <span className="text-sm">
-                          <span id="stock-pcs-display">
-                            {(() => {
-                              const stockQty = document.getElementById('stock_quantity')?.value || editingProduct?.stock_quantity || 0;
-                              const pcsPerUnit = document.getElementById('pcs_per_base_unit')?.value || editingProduct?.pcs_per_base_unit || 1;
-                              return Number(stockQty) * Number(pcsPerUnit);
-                            })()} pcs
-                          </span>
-                        </span>
-                      </div>
+                      <Label htmlFor="stock_pcs">Stock in Pieces</Label>
+                      <Input
+                        id="stock_pcs"
+                        name="stock_pcs"
+                        type="number"
+                        defaultValue={editingProduct?.stock_pcs || 0}
+                        onChange={(e) => {
+                          const stockPcs = Number(e.target.value) || 0;
+                          const pcsPerUnit = Number((document.getElementById('pcs_per_base_unit') as HTMLInputElement)?.value) || 1;
+                          const stockQtyInput = document.getElementById('stock_quantity') as HTMLInputElement;
+                          if (stockQtyInput && pcsPerUnit > 0) {
+                            const calculatedBaseUnits = Math.floor(stockPcs / pcsPerUnit);
+                            stockQtyInput.value = calculatedBaseUnits.toString();
+                          }
+                        }}
+                        required
+                      />
                       <p className="text-sm text-muted-foreground mt-1">
-                        Real-time calculation from base unit stock
+                        Stock in pieces (editable)
                       </p>
                     </div>
                   </div>
