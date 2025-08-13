@@ -451,15 +451,9 @@ const Cashier = () => {
         }),
         invoice_status: paymentMethod === 'credit' ? 'belum_bayar' : 'lunas',
       };
-          sale_number: saleNumber,
-      if (saleData.useOriginalNumber && saleData.originalSaleNumber) {
-        saleNumber = saleData.originalSaleNumber;
-      } else {
-        const { data } = await supabase.rpc('generate_sale_number');
-        saleNumber = data;
-      }
+
       
-          created_by: user?.id,
+
       const { data: sale, error: saleError } = await supabase
         .from("sales")
         .insert(saleData)
@@ -1377,6 +1371,83 @@ const Cashier = () => {
         onProceedToPayment={handlePreCheckoutProceed}
       />
       
+      {/* Reorder Confirmation Dialog */}
+      <Dialog open={isConfirmReorderOpen} onOpenChange={setIsConfirmReorderOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Transaksi Ulang</DialogTitle>
+          </DialogHeader>
+          
+          {foundSale && (
+            <div className="space-y-6">
+              {/* Transaction Details */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold mb-3">Detail Transaksi Asli</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Nomor:</span>
+                    <span className="ml-2 font-medium">{foundSale.sale_number}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Customer:</span>
+                    <span className="ml-2 font-medium">{foundSale.customer_name || 'Walk-in'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Total:</span>
+                    <span className="ml-2 font-medium text-green-600">
+                      {formatCurrency(Number(foundSale.total_amount))}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Tanggal:</span>
+                    <span className="ml-2 font-medium">
+                      {new Date(foundSale.created_at).toLocaleDateString('id-ID')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Items List */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold mb-3">Item Transaksi ({foundSale.sale_items?.length || 0})</h3>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {foundSale.sale_items?.map((item: any, index: number) => (
+                    <div key={index} className="flex justify-between items-center text-sm border-b pb-2">
+                      <div>
+                        <span className="font-medium">{item.products?.name}</span>
+                        {item.discount > 0 && (
+                          <span className="ml-2 text-green-600">(-{item.discount}%)</span>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <div>{item.quantity}x {formatCurrency(Number(item.unit_price))}</div>
+                        <div className="font-medium">{formatCurrency(Number(item.subtotal))}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Transaction Number Choice */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold mb-3">Pilihan Nomor Transaksi</h3>
+                <RadioGroup 
+                  value={useOriginalNumber ? "original" : "new"} 
+                  onValueChange={(value) => setUseOriginalNumber(value === "original")}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="new" id="new" />
+                    <Label htmlFor="new">Nomor baru (otomatis)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="original" id="original" />
+                    <Label htmlFor="original">
+                      Gunakan nomor asli: <span className="font-mono">{foundSale.sale_number}</span>
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+      
       {/* Confirm Reorder Dialog */}
       <Dialog open={isConfirmReorderOpen} onOpenChange={setIsConfirmReorderOpen}>
         <DialogContent className="max-w-2xl">
@@ -1470,4 +1541,53 @@ const Cashier = () => {
   );
 };
 
+              {/* Stock Confirmation */}
+              <div className="border border-amber-200 bg-amber-50 rounded-lg p-4">
+                <h3 className="font-semibold text-amber-800 mb-3">⚠️ Konfirmasi Penyesuaian Stok</h3>
+                <div className="space-y-2 text-sm text-amber-700 mb-4">
+                  <p>
+                    <strong>Penting:</strong> Transaksi ulang akan menambahkan item ke keranjang, 
+                    namun <strong>tidak otomatis mengurangi stok</strong> dari sistem.
+                  </p>
+                  <p>
+                    Pastikan untuk <strong>memeriksa dan menyesuaikan stok barang secara manual</strong> 
+                    sesuai dengan kondisi fisik di gudang/toko.
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="stockConfirm" 
+                    checked={stockConfirmed}
+                    onCheckedChange={(checked) => setStockConfirmed(checked as boolean)}
+                  />
+                  <Label htmlFor="stockConfirm" className="text-sm font-medium text-amber-800">
+                    Saya memahami dan akan menyesuaikan stok barang secara manual
+                  </Label>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsConfirmReorderOpen(false);
+                setFoundSale(null);
+                setUseOriginalNumber(false);
+                setStockConfirmed(false);
+              }}
+            >
+              Batal
+            </Button>
+            <Button 
+              onClick={handleConfirmReorder}
+              disabled={!stockConfirmed}
+              className={!stockConfirmed ? "opacity-50 cursor-not-allowed" : ""}
+            >
+              Konfirmasi Transaksi Ulang
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 export default Cashier;
