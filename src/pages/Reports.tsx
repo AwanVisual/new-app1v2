@@ -1138,7 +1138,7 @@ const Reports = () => {
                           console.error('Original item not found!');
                           return;
                         }
-                          })()
+                          });
                         )}
                       </TableCell>
                       <TableCell>{formatCurrency(Number(sale.total_amount))}</TableCell>
