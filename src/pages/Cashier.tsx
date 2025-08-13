@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import PreCheckoutDialog from "@/components/PreCheckoutDialog";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface CartItem {
@@ -50,6 +51,7 @@ const Cashier = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const queryClient = useQueryClient();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerName, setCustomerName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<string>("cash");
@@ -70,6 +72,37 @@ const Cashier = () => {
   const [foundSale, setFoundSale] = useState<any>(null);
 
   const handleSearchSale = async (saleNumber: string) => {
+  const searchSaleMutation = useMutation({
+    mutationFn: async (saleNumber: string) => {
+      const { data, error } = await supabase
+        .from('sales')
+        .select(`
+          *,
+          sale_items (
+            *,
+            products (*)
+          )
+        `)
+        .eq('sale_number', saleNumber)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      setFoundSale(data);
+      setIsReorderDialogOpen(false);
+      setIsConfirmReorderOpen(true);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: "Nomor penjualan tidak ditemukan",
+        variant: "destructive"
+      });
+    }
+  });
+
     if (!saleNumber.trim()) {
       toast({
         title: "Error",
