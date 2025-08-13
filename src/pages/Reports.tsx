@@ -1135,7 +1135,9 @@ const Reports = () => {
                                 <span className="text-muted-foreground">-</span>
                               );
                             }
-                            return <span className="text-muted-foreground">-</span>;
+                          console.error('Original item not found!');
+                          return;
+                        }
                           })()
                         )}
                       </TableCell>
