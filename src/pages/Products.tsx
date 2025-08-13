@@ -34,6 +34,8 @@ const Products = () => {
   const [reduceStockUnitType, setReduceStockUnitType] = useState<'pcs' | 'base_unit'>('base_unit');
   const [stockNotes, setStockNotes] = useState('');
   const [reduceStockNotes, setReduceStockNotes] = useState('');
+  const [selectedProductHistory, setSelectedProductHistory] = useState<any>(null);
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
 
   const canManage = userRole === 'admin' || userRole === 'stockist';
 
@@ -54,6 +56,20 @@ const Products = () => {
       const { data } = await supabase.from('categories').select('*');
       return data || [];
     },
+  });
+
+  const { data: stockMovements } = useQuery({
+    queryKey: ['stock-movements', selectedProductHistory?.id],
+    queryFn: async () => {
+      if (!selectedProductHistory?.id) return [];
+      const { data } = await supabase
+        .from('stock_movements')
+        .select('*, profiles(full_name)')
+        .eq('product_id', selectedProductHistory.id)
+        .order('created_at', { ascending: false });
+      return data || [];
+    },
+    enabled: !!selectedProductHistory?.id,
   });
 
   const createProductMutation = useMutation({
@@ -532,6 +548,10 @@ const Products = () => {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => {
+                        setSelectedProductHistory(product);
+                        setIsHistoryDialogOpen(true);
+                      }}
                       className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                     >
                       <Package className="h-4 w-4 mr-1" />
@@ -783,6 +803,169 @@ const Products = () => {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stock History Dialog */}
+      <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Stock History - {selectedProductHistory?.name}</DialogTitle>
+          </DialogHeader>
+          
+          {selectedProductHistory && (
+            <div className="space-y-6">
+              {/* Initial Stock Info */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Initial Stock Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {selectedProductHistory.initial_stock_quantity || 0}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Initial {selectedProductHistory.base_unit || 'units'}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {selectedProductHistory.initial_stock_pcs || 0}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Initial Pieces</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">
+                        +{selectedProductHistory.total_stock_added || 0}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Total Added (pcs)</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-red-600">
+                        -{selectedProductHistory.total_stock_reduced || 0}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Total Reduced (pcs)</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Current Stock Status */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Current Stock Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-purple-600">
+                        {selectedProductHistory.stock_quantity || 0}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Current {selectedProductHistory.base_unit || 'units'}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-purple-600">
+                        {selectedProductHistory.stock_pcs || 0}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Current Pieces</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Stock Movement History */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Stock Movement History</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {stockMovements && stockMovements.length > 0 ? (
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {stockMovements.map((movement) => (
+                        <div 
+                          key={movement.id} 
+                          className={`border rounded-lg p-4 ${
+                            movement.transaction_type === 'inbound' 
+                              ? 'border-green-200 bg-green-50' 
+                              : movement.transaction_type === 'outbound'
+                              ? 'border-red-200 bg-red-50'
+                              : 'border-yellow-200 bg-yellow-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <Badge 
+                                variant={
+                                  movement.transaction_type === 'inbound' 
+                                    ? 'default' 
+                                    : movement.transaction_type === 'outbound'
+                                    ? 'destructive'
+                                    : 'secondary'
+                                }
+                              >
+                                {movement.transaction_type === 'inbound' ? 'Stock In' : 
+                                 movement.transaction_type === 'outbound' ? 'Stock Out' : 'Adjustment'}
+                              </Badge>
+                              <span className="text-sm text-muted-foreground">
+                                {new Date(movement.created_at).toLocaleDateString('id-ID', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <div className={`text-lg font-bold ${
+                                movement.transaction_type === 'inbound' ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {movement.transaction_type === 'inbound' ? '+' : '-'}
+                                {movement.quantity} {movement.unit_type === 'pcs' ? 'pcs' : selectedProductHistory.base_unit}
+                              </div>
+                              {movement.unit_type === 'base_unit' && selectedProductHistory.pcs_per_base_unit > 1 && (
+                                <div className="text-sm text-muted-foreground">
+                                  ({movement.transaction_type === 'inbound' ? '+' : '-'}
+                                  {movement.quantity * (selectedProductHistory.pcs_per_base_unit || 1)} pcs)
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Reference:</span>
+                              <div className="font-medium">{movement.reference_number || 'N/A'}</div>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">By:</span>
+                              <div className="font-medium">{movement.profiles?.full_name || 'System'}</div>
+                            </div>
+                          </div>
+                          
+                          {movement.notes && (
+                            <div className="mt-2">
+                              <span className="text-muted-foreground text-sm">Notes:</span>
+                              <div className="text-sm">{movement.notes}</div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No stock movements recorded yet</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
