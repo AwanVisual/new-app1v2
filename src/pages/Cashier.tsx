@@ -50,6 +50,7 @@ interface ReceiptFieldsConfig {
 
 const Cashier = () => {
   const { user } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -64,6 +65,14 @@ const Cashier = () => {
     showDiscount: false,
     showPpn11: false,
     discountPercentage: 0,
+  // Reorder states
+  const [isReorderDialogOpen, setIsReorderDialogOpen] = useState(false);
+  const [isConfirmReorderOpen, setIsConfirmReorderOpen] = useState(false);
+  const [searchSaleNumber, setSearchSaleNumber] = useState('');
+  const [foundSale, setFoundSale] = useState<any>(null);
+  const [useOriginalNumber, setUseOriginalNumber] = useState(false);
+  const [stockConfirmed, setStockConfirmed] = useState(false);
+  
     useSpecialCustomerCalculation: false,
   });
   const [selectedCashier, setSelectedCashier] = useState<string>("");
