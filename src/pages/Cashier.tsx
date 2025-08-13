@@ -22,6 +22,7 @@ import {
   Calculator,
   Percent,
   Package,
+  RotateCcw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
@@ -860,6 +861,14 @@ const Cashier = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900">Cashier</h1>
+        <Button
+          onClick={() => setIsReorderDialogOpen(true)}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Transaksi Ulang
+        </Button>
         
         {/* Reorder Button */}
         <Dialog open={reorderDialogOpen} onOpenChange={setReorderDialogOpen}>
