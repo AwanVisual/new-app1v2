@@ -858,8 +858,128 @@ const Cashier = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900">Cashier</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-900">Cashier</h1>
+        
+        {/* Reorder Button */}
+        <Dialog open={reorderDialogOpen} onOpenChange={setReorderDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Receipt className="h-4 w-4" />
+              Transaksi Ulang
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Transaksi Ulang</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="reorderSaleNumber">Nomor Penjualan</Label>
+                <Input
+                  id="reorderSaleNumber"
+                  value={reorderSaleNumber}
+                  onChange={(e) => setReorderSaleNumber(e.target.value)}
+                  placeholder="Masukkan nomor penjualan (contoh: SALE-20250101-001)"
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setReorderDialogOpen(false);
+                    setReorderSaleNumber("");
+                  }}
+                >
+                  Batal
+                </Button>
+                <Button 
+                  onClick={handleSearchSale}
+                  disabled={searchSaleMutation.isPending}
+                >
+                  {searchSaleMutation.isPending ? "Mencari..." : "Cari Transaksi"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
 
+      {/* Reorder Confirmation Dialog */}
+      <Dialog open={showReorderConfirm} onOpenChange={setShowReorderConfirm}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Transaksi Ulang</DialogTitle>
+          </DialogHeader>
+          {foundSale && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-medium mb-2">Detail Transaksi Sebelumnya:</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Nomor:</span>
+                    <div className="font-medium">{foundSale.sale_number}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Tanggal:</span>
+                    <div className="font-medium">
+                      {new Date(foundSale.created_at).toLocaleDateString("id-ID")}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Customer:</span>
+                    <div className="font-medium">{foundSale.customer_name || "Walk-in"}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Total:</span>
+                    <div className="font-medium">{formatCurrency(foundSale.total_amount)}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-medium mb-2">Items yang akan ditambahkan:</h4>
+                <div className="max-h-48 overflow-y-auto space-y-2">
+                  {foundSale.sale_items?.map((item: any, index: number) => (
+                    <div key={index} className="flex justify-between items-center p-2 bg-white border rounded">
+                      <div>
+                        <div className="font-medium">{item.products?.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {item.quantity} {item.unit_type === 'pcs' ? 'pcs' : (item.products?.base_unit || 'unit')}
+                          {item.discount > 0 && (
+                            <span className="text-green-600 ml-2">(-{item.discount}%)</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium">{formatCurrency(item.subtotal)}</div>
+                        <div className="text-sm text-muted-foreground">
+                          @ {formatCurrency(item.unit_price)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4 border-t">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowReorderConfirm(false);
+                    setFoundSale(null);
+                  }}
+                >
+                  Batal
+                </Button>
+                <Button onClick={handleConfirmReorder}>
+                  Konfirmasi Transaksi Ulang
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Products */}
         <Card>
