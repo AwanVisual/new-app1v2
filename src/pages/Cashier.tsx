@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import PreCheckoutDialog from "@/components/PreCheckoutDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface CartItem {
   product: any;
@@ -63,6 +64,10 @@ const Cashier = () => {
     useSpecialCustomerCalculation: false,
   });
   const [selectedCashier, setSelectedCashier] = useState<string>("");
+  const [reorderDialogOpen, setReorderDialogOpen] = useState(false);
+  const [reorderSaleNumber, setReorderSaleNumber] = useState("");
+  const [foundSale, setFoundSale] = useState<any>(null);
+  const [showReorderConfirm, setShowReorderConfirm] = useState(false);
 
   // Update payment received when payment method changes
   useEffect(() => {
