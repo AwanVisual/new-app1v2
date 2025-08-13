@@ -67,6 +67,8 @@ const Cashier = () => {
   const [reorderDialogOpen, setReorderDialogOpen] = useState(false);
   const [reorderSaleNumber, setReorderSaleNumber] = useState("");
   const [foundSale, setFoundSale] = useState<any>(null);
+  const [useOriginalNumber, setUseOriginalNumber] = useState(false);
+  const [stockWarningChecked, setStockWarningChecked] = useState(false);
 
 
 
