@@ -1087,7 +1087,7 @@ const Reports = () => {
 
                 <div className="space-y-2">
                   {editItemsData.map((item, index) => (
-                    <div key={item.id} className="grid grid-cols-6 gap-2 items-end p-2 border rounded">
+                    <div key={item.id} className="grid grid-cols-7 gap-2 items-end p-2 border rounded">
                       <div>
                         <label className="text-sm font-medium">Product</label>
                         <Select
@@ -1115,6 +1115,24 @@ const Reports = () => {
                           value={item.quantity}
                           onChange={(e) => updateEditItem(index, 'quantity', parseInt(e.target.value) || 1)}
                         />
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium">Unit Type</label>
+                        <Select
+                          value={item.unit_type || 'base_unit'}
+                          onValueChange={(value) => updateEditItem(index, 'unit_type', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pcs">Pcs</SelectItem>
+                            <SelectItem value="base_unit">
+                              {allProducts?.find(p => p.id === item.product_id)?.base_unit || 'Unit'}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <div>
