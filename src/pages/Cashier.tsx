@@ -50,6 +50,7 @@ interface ReceiptFieldsConfig {
 
 const Cashier = () => {
   const { user } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -76,6 +77,14 @@ const Cashier = () => {
   const [useOriginalNumber, setUseOriginalNumber] = useState(false);
   const [stockWarningChecked, setStockWarningChecked] = useState(false);
   const [showReorderConfirm, setShowReorderConfirm] = useState(false);
+  
+  // Reorder states
+  const [isReorderDialogOpen, setIsReorderDialogOpen] = useState(false);
+  const [isConfirmReorderOpen, setIsConfirmReorderOpen] = useState(false);
+  const [searchSaleNumber, setSearchSaleNumber] = useState('');
+  const [foundSale, setFoundSale] = useState<any>(null);
+  const [useOriginalNumber, setUseOriginalNumber] = useState(false);
+  const [stockConfirmed, setStockConfirmed] = useState(false);
   const [isConfirmReorderOpen, setIsConfirmReorderOpen] = useState(false);
   const [stockConfirmed, setStockConfirmed] = useState(false);
 
@@ -1679,150 +1688,6 @@ const Cashier = () => {
                 setStockConfirmed(false);
               }}
             >
-              Batal
-            </Button>
-            <Button 
-              onClick={handleConfirmReorder}
-              disabled={!stockConfirmed}
-              className={!stockConfirmed ? "opacity-50 cursor-not-allowed" : ""}
-            >
-              Konfirmasi Transaksi Ulang
-            </Button>
-          </DialogFooter>
-          
-          <Button
-            variant="outline"
-            onClick={() => setIsReorderDialogOpen(true)}
-            className="flex-1"
-          >
-            <RotateCcw className="h-4 w-4 mr-2" />
-            Transaksi Ulang
-          </Button>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reorder Dialog - Input Sale Number */}
-      <Dialog open={isReorderDialogOpen} onOpenChange={setIsReorderDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cari Transaksi untuk Diulang</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="saleNumber">Nomor Transaksi</Label>
-              <Input
-                id="saleNumber"
-                value={searchSaleNumber}
-                onChange={(e) => setSearchSaleNumber(e.target.value)}
-                placeholder="Masukkan nomor transaksi (contoh: SALE-20240101-001)"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSearchSale();
-                  }
-                }}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsReorderDialogOpen(false)}>
-              Batal
-            </Button>
-            <Button 
-              onClick={handleSearchSale}
-              disabled={searchSaleMutation.isPending}
-            >
-              {searchSaleMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Mencari...
-                </>
-              ) : (
-                <>
-                  <Search className="h-4 w-4 mr-2" />
-                  Cari Transaksi
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reorder Confirmation Dialog */}
-      <Dialog open={isConfirmReorderOpen} onOpenChange={setIsConfirmReorderOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Konfirmasi Transaksi Ulang</DialogTitle>
-          </DialogHeader>
-          
-          {foundSale && (
-            <div className="space-y-6">
-              {/* Transaction Details */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold mb-3">Detail Transaksi</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Nomor:</span>
-                    <div className="font-medium">{foundSale.sale_number}</div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Customer:</span>
-                    <div className="font-medium">{foundSale.customer_name || 'Walk-in Customer'}</div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Total:</span>
-                    <div className="font-medium">{formatCurrency(foundSale.total_amount)}</div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Items:</span>
-                    <div className="font-medium">{foundSale.sale_items?.length || 0} item</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Transaction Number Choice */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold mb-3">Pilihan Nomor Transaksi</h3>
-                <RadioGroup 
-                  value={useOriginalNumber ? "original" : "new"} 
-                  onValueChange={(value) => setUseOriginalNumber(value === "original")}
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="new" id="new" />
-                    <Label htmlFor="new">Nomor baru (otomatis)</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="original" id="original" />
-                    <Label htmlFor="original">Gunakan nomor asli: {foundSale.sale_number}</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              {/* Stock Confirmation */}
-              <div className="border border-amber-200 bg-amber-50 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <Checkbox
-                    id="stockConfirm"
-                    checked={stockConfirmed}
-                    onCheckedChange={(checked) => setStockConfirmed(checked as boolean)}
-                  />
-                  <div className="space-y-2">
-                    <Label htmlFor="stockConfirm" className="text-amber-800 font-semibold">
-                      ⚠️ Konfirmasi Penyesuaian Stok
-                    </Label>
-                    <div className="text-sm text-amber-700 space-y-1">
-                      <p><strong>Saya memahami bahwa:</strong></p>
-                      <p>• Transaksi ulang akan mengurangi stok barang lagi</p>
-                      <p>• Saya perlu memeriksa kondisi fisik barang di gudang</p>
-                      <p>• Penyesuaian stok manual mungkin diperlukan setelah transaksi</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsConfirmReorderOpen(false)}>
               Batal
             </Button>
             <Button 
