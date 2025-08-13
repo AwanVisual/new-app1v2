@@ -50,7 +50,6 @@ interface ReceiptFieldsConfig {
 
 const Cashier = () => {
   const { user } = useAuth();
-  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -63,7 +62,8 @@ const Cashier = () => {
   const [isConfirmReorderOpen, setIsConfirmReorderOpen] = useState(false);
   const [searchSaleNumber, setSearchSaleNumber] = useState('');
   const [useOriginalNumber, setUseOriginalNumber] = useState(false);
-  const [useOriginalNumber, setUseOriginalNumber] = useState(false);
+  const [receiptConfig, setReceiptConfig] = useState<ReceiptFieldsConfig>({
+    showAmount: false,
     showDppFaktur: false,
     showDiscount: false,
     showPpn11: false,
@@ -74,18 +74,8 @@ const Cashier = () => {
   const [reorderDialogOpen, setReorderDialogOpen] = useState(false);
   const [reorderSaleNumber, setReorderSaleNumber] = useState("");
   const [foundSale, setFoundSale] = useState<any>(null);
-  const [useOriginalNumber, setUseOriginalNumber] = useState(false);
   const [stockWarningChecked, setStockWarningChecked] = useState(false);
   const [showReorderConfirm, setShowReorderConfirm] = useState(false);
-  
-  // Reorder states
-  const [isReorderDialogOpen, setIsReorderDialogOpen] = useState(false);
-  const [isConfirmReorderOpen, setIsConfirmReorderOpen] = useState(false);
-  const [searchSaleNumber, setSearchSaleNumber] = useState('');
-  const [foundSale, setFoundSale] = useState<any>(null);
-  const [useOriginalNumber, setUseOriginalNumber] = useState(false);
-  const [stockConfirmed, setStockConfirmed] = useState(false);
-  const [isConfirmReorderOpen, setIsConfirmReorderOpen] = useState(false);
   const [stockConfirmed, setStockConfirmed] = useState(false);
 
   const searchSaleMutation = useMutation({
@@ -1265,14 +1255,6 @@ const Cashier = () => {
                       <p className="text-sm text-muted-foreground">
                         {formatCurrency(Number(product.price_per_pcs))} / pcs
                       </p>
-                    )}
-                  </div>
-                  {/* Stock Status Indicator */}
-                  <div className="mt-2">
-                    {Math.floor(product.stock_quantity || 0) < 1 && (product.stock_pcs || 0) > 0 && (
-                      <div className="text-xs text-amber-600 bg-amber-50 p-1 rounded">
-                        ⚠️ Hanya tersisa {product.stock_pcs} pcs - Tidak bisa jual per {product.base_unit}
-                      </div>
                     )}
                   </div>
                   {/* Stock Status Indicator */}
