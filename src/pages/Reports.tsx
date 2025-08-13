@@ -813,132 +813,6 @@ const Reports = () => {
         </div>
       </div>
 
-      {/* Edit Item Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Item</DialogTitle>
-          </DialogHeader>
-          
-          {editingItem && (
-            <div className="space-y-4">
-              <div className="border rounded-lg p-4">
-                <h4 className="font-medium mb-2">{editingItem.products?.name}</h4>
-                <p className="text-sm text-muted-foreground mb-3">
-                  SKU: {editingItem.products?.sku}
-                </p>
-                
-                {/* Unit Type Selection */}
-                <div className="space-y-2 mb-4">
-                  <Label>Unit Type</Label>
-                  <div className="flex items-center space-x-2">
-                    <PackageIcon className="h-4 w-4 text-muted-foreground" />
-                    <Select
-                      value={editingItem.currentUnitType}
-                      onValueChange={(value) => {
-                        console.log('🔄 Unit type changed to:', value);
-                        setEditingItem(prev => ({ ...prev, currentUnitType: value }));
-                      }}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pcs">Pcs</SelectItem>
-                        <SelectItem value="base_unit">
-                          {editingItem.products?.base_unit || 'Unit'}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    1 {editingItem.products?.base_unit || 'unit'} = {editingItem.products?.pcs_per_base_unit || 1} pcs
-                  </p>
-                </div>
-                
-                {/* Quantity Controls */}
-                <div className="space-y-2 mb-4">
-                  <Label>Quantity</Label>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateEditingQuantity(editingItem.currentQuantity - 1)}
-                      disabled={editingItem.currentQuantity <= 1}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <div className="w-20 text-center">
-                      <span className="text-lg font-medium">
-                        {editingItem.currentQuantity}
-                      </span>
-                      <div className="text-xs text-muted-foreground">
-                        {editingItem.currentUnitType === 'pcs' ? 'pcs' : (editingItem.products?.base_unit || 'unit')}
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateEditingQuantity(editingItem.currentQuantity + 1)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  {editingItem.currentUnitType === 'base_unit' && editingItem.products?.pcs_per_base_unit > 1 && (
-                    <p className="text-xs text-muted-foreground">
-                      = {editingItem.currentQuantity * (editingItem.products?.pcs_per_base_unit || 1)} pcs total
-                    </p>
-                  )}
-                </div>
-                
-                {/* Price Info */}
-                <div className="space-y-2 mb-4">
-                  <Label>Price per {editingItem.currentUnitType === 'pcs' ? 'pcs' : (editingItem.products?.base_unit || 'unit')}</Label>
-                  <div className="text-lg font-medium">
-                    {formatCurrency(
-                      editingItem.currentUnitType === 'pcs' 
-                        ? Number(editingItem.products?.price_per_pcs || editingItem.products?.price)
-                        : Number(editingItem.products?.price)
-                    )}
-                  </div>
-                </div>
-                
-                {/* Total */}
-                <div className="border-t pt-3">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Total:</span>
-                    <span className="text-lg font-bold text-green-600">
-                      {formatCurrency(
-                        (editingItem.currentUnitType === 'pcs' 
-                          ? Number(editingItem.products?.price_per_pcs || editingItem.products?.price)
-                          : Number(editingItem.products?.price)
-                        ) * editingItem.currentQuantity
-                      )}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsEditDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleSaveEdit}
-                  disabled={updateSaleItemMutation.isPending}
-                >
-                  {updateSaleItemMutation.isPending ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="sales">Sales Reports</TabsTrigger>
@@ -1135,10 +1009,8 @@ const Reports = () => {
                                 <span className="text-muted-foreground">-</span>
                               );
                             }
-                          console.error('Original item not found!');
-                          return;
-                        }
-                          });
+                            return <span className="text-muted-foreground">-</span>;
+                          })()
                         )}
                       </TableCell>
                       <TableCell>{formatCurrency(Number(sale.total_amount))}</TableCell>
@@ -1195,19 +1067,7 @@ const Reports = () => {
             </CardContent>
           </Card>
 
-                      console.log('Save button clicked');
-                      console.log('Current editItem:', editItem);
-                      console.log('Original item from selectedSale:', selectedSale?.sale_items?.find(item => item.id === editItem.id));
-                      
           {/* Edit Items Dialog */}
-                      
-                      if (!originalItem) {
-                        console.error('Original item not found!');
-                        return;
-                      }
-                      
-                      console.log('Original item data:', originalItem);
-                      
           <Dialog open={!!editingItems} onOpenChange={() => setEditingItems(null)}>
             <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
