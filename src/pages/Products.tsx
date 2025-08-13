@@ -248,14 +248,12 @@ const Products = () => {
       description: formData.get('description') as string,
       base_unit: formData.get('base_unit') as string,
       pcs_per_base_unit: pcsPerBaseUnit,
-      // Add initial stock tracking for new products
-      ...(editingProduct ? {} : {
-        initial_stock_quantity: stockQuantity,
-        initial_stock_pcs: parseInt(formData.get('stock_pcs') as string),
-        total_stock_added: 0,
-        total_stock_reduced: 0,
-        stock_movement_count: 0,
-      }),
+      // Set initial stock for new products only
+      initial_stock_quantity: editingProduct ? editingProduct.initial_stock_quantity : stockQuantity,
+      initial_stock_pcs: editingProduct ? editingProduct.initial_stock_pcs : parseInt(formData.get('stock_pcs') as string),
+      total_stock_added: editingProduct ? editingProduct.total_stock_added : 0,
+      total_stock_reduced: editingProduct ? editingProduct.total_stock_reduced : 0,
+      stock_movement_count: editingProduct ? editingProduct.stock_movement_count : 0,
     };
 
     if (editingProduct) {
@@ -417,7 +415,9 @@ const Products = () => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="stock_quantity">Stock Quantity (Base Unit)</Label>
+                      <Label htmlFor="stock_quantity">
+                        {editingProduct ? 'Current Stock (Base Unit)' : 'Initial Stock (Base Unit)'}
+                      </Label>
                       <Input
                         id="stock_quantity"
                         name="stock_quantity"
@@ -430,22 +430,17 @@ const Products = () => {
                           if (stockPcsInput) {
                             stockPcsInput.value = (stockQty * pcsPerUnit).toString();
                           }
-                          // Update initial stock fields for new products
-                          if (!editingProduct) {
-                            const initialStockQtyInput = document.getElementById('initial_stock_quantity') as HTMLInputElement;
-                            const initialStockPcsInput = document.getElementById('initial_stock_pcs') as HTMLInputElement;
-                            if (initialStockQtyInput) initialStockQtyInput.value = stockQty.toString();
-                            if (initialStockPcsInput) initialStockPcsInput.value = (stockQty * pcsPerUnit).toString();
-                          }
                         }}
                         required
                       />
                       <p className="text-sm text-muted-foreground mt-1">
-                        Stock in {editingProduct?.base_unit || 'base units'}
+                        {editingProduct ? 'Current stock' : 'This will be your initial stock'} in {editingProduct?.base_unit || 'base units'}
                       </p>
                     </div>
                     <div>
-                      <Label htmlFor="stock_pcs">Stock in Pieces</Label>
+                      <Label htmlFor="stock_pcs">
+                        {editingProduct ? 'Current Stock (Pieces)' : 'Initial Stock (Pieces)'}
+                      </Label>
                       <Input
                         id="stock_pcs"
                         name="stock_pcs"
@@ -459,27 +454,14 @@ const Products = () => {
                             const calculatedBaseUnits = Math.floor(stockPcs / pcsPerUnit);
                             stockQtyInput.value = calculatedBaseUnits.toString();
                           }
-                          // Update initial stock fields for new products
-                          if (!editingProduct) {
-                            const initialStockQtyInput = document.getElementById('initial_stock_quantity') as HTMLInputElement;
-                            const initialStockPcsInput = document.getElementById('initial_stock_pcs') as HTMLInputElement;
-                            if (initialStockPcsInput) initialStockPcsInput.value = stockPcs.toString();
-                            if (initialStockQtyInput && pcsPerUnit > 0) {
-                              initialStockQtyInput.value = Math.floor(stockPcs / pcsPerUnit).toString();
-                            }
-                          }
                         }}
                         required
                       />
                       <p className="text-sm text-muted-foreground mt-1">
-                        Stock in pieces (editable)
+                        {editingProduct ? 'Current stock' : 'This will be your initial stock'} in pieces
                       </p>
                     </div>
                   </div>
-
-                  {/* Initial Stock Fields (hidden inputs for new products) */}
-                  <input type="hidden" id="initial_stock_quantity" name="initial_stock_quantity" defaultValue={editingProduct?.initial_stock_quantity || 0} />
-                  <input type="hidden" id="initial_stock_pcs" name="initial_stock_pcs" defaultValue={editingProduct?.initial_stock_pcs || 0} />
 
                   <div>
                     <Label htmlFor="min_stock_level">Min Stock Level (Pieces)</Label>
