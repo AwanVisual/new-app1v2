@@ -62,9 +62,7 @@ const Cashier = () => {
   const [isConfirmReorderOpen, setIsConfirmReorderOpen] = useState(false);
   const [searchSaleNumber, setSearchSaleNumber] = useState('');
   const [useOriginalNumber, setUseOriginalNumber] = useState(false);
-  const [stockConfirmed, setStockConfirmed] = useState(false);
-  const [receiptConfig, setReceiptConfig] = useState<ReceiptFieldsConfig>({
-    showAmount: true,
+  const [useOriginalNumber, setUseOriginalNumber] = useState(false);
     showDppFaktur: false,
     showDiscount: false,
     showPpn11: false,
