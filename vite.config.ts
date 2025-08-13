@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => ({
       "02224be6-1b6e-49b2-b545-903f99dbf9c6-00-1nr8a9klf14fr.pike.replit.dev", // Add your host here
     ],
   },
-  plugins: [react()].filter(Boolean),
+  plugins: [react()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

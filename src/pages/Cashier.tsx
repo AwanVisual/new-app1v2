@@ -22,7 +22,6 @@ import {
   Calculator,
   Percent,
   Package,
-  RotateCcw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
@@ -68,81 +67,6 @@ const Cashier = () => {
   const [reorderDialogOpen, setReorderDialogOpen] = useState(false);
   const [reorderSaleNumber, setReorderSaleNumber] = useState("");
   const [foundSale, setFoundSale] = useState<any>(null);
-
-  const handleSearchSale = async (saleNumber: string) => {
-  const searchSaleMutation = useMutation({
-    mutationFn: async (saleNumber: string) => {
-      const { data, error } = await supabase
-        .from('sales')
-        .select(`
-          *,
-          sale_items (
-            *,
-            products (*)
-          )
-        `)
-        .eq('sale_number', saleNumber)
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      setFoundSale(data);
-      setIsReorderDialogOpen(false);
-      setIsConfirmReorderOpen(true);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: "Nomor penjualan tidak ditemukan",
-        variant: "destructive"
-      });
-    }
-  });
-
-    if (!saleNumber.trim()) {
-      toast({
-        title: "Error",
-        description: "Masukkan nomor penjualan",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      const { data: sale, error } = await supabase
-        .from('sales')
-        .select(`
-          *,
-          sale_items (
-            *,
-            product:products (*)
-          )
-        `)
-        .eq('sale_number', saleNumber.trim())
-        .single();
-
-      if (error || !sale) {
-        toast({
-          title: "Error", 
-          description: "Nomor penjualan tidak ditemukan",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      setFoundSale(sale);
-      setIsReorderDialogOpen(false);
-      setIsConfirmReorderOpen(true);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Terjadi kesalahan saat mencari transaksi",
-        variant: "destructive"
-      });
-    }
-  };
   const [showReorderConfirm, setShowReorderConfirm] = useState(false);
 
   // Update payment received when payment method changes
@@ -936,14 +860,6 @@ const Cashier = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900">Cashier</h1>
-        <Button
-          onClick={() => setIsReorderDialogOpen(true)}
-          variant="outline"
-          className="flex items-center gap-2"
-        >
-          <RotateCcw className="h-4 w-4" />
-          Transaksi Ulang
-        </Button>
         
         {/* Reorder Button */}
         <Dialog open={reorderDialogOpen} onOpenChange={setReorderDialogOpen}>
