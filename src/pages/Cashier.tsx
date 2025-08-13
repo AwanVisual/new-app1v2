@@ -61,7 +61,6 @@ const Cashier = () => {
   const [isReorderDialogOpen, setIsReorderDialogOpen] = useState(false);
   const [isConfirmReorderOpen, setIsConfirmReorderOpen] = useState(false);
   const [searchSaleNumber, setSearchSaleNumber] = useState('');
-  const [foundSale, setFoundSale] = useState<any>(null);
   const [useOriginalNumber, setUseOriginalNumber] = useState(false);
   const [stockConfirmed, setStockConfirmed] = useState(false);
   const [receiptConfig, setReceiptConfig] = useState<ReceiptFieldsConfig>({
