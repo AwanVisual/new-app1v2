@@ -400,53 +400,6 @@ const Cashier = () => {
     }
   };
 
-  const handleConfirmReorder = () => {
-    if (!stockWarningChecked) {
-      toast({
-        title: "Peringatan",
-        description: "Harap centang konfirmasi penyesuaian stok terlebih dahulu",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!foundSale || !foundSale.sale_items) {
-      toast({
-        title: "Error",
-        description: "Data transaksi tidak valid",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Clear current cart
-    setCart([]);
-    
-    // Add items from found sale to cart
-    const newCartItems: CartItem[] = foundSale.sale_items.map((saleItem: any) => ({
-      product: saleItem.products,
-      quantity: saleItem.quantity,
-      unitType: saleItem.unit_type || 'base_unit',
-      customDiscount: saleItem.discount || 0,
-    }));
-    
-    setCart(newCartItems);
-    setCustomerName(foundSale.customer_name || '');
-    
-    // Close dialogs and reset states
-    setReorderDialogOpen(false);
-    setIsConfirmReorderOpen(false);
-    setFoundSale(null);
-    setSearchSaleNumber('');
-    setUseOriginalNumber(false);
-    setStockWarningChecked(false);
-    
-    toast({
-      title: "Berhasil",
-      description: `${foundSale.sale_items.length} item berhasil ditambahkan ke keranjang`,
-    });
-  };
-
   const processSaleMutation = useMutation({
     mutationFn: async () => {
       if (cart.length === 0) throw new Error("Cart is empty");
@@ -1491,13 +1444,18 @@ const Cashier = () => {
               onClick={() => {
                 setIsConfirmReorderOpen(false);
                 setFoundSale(null);
-                setSearchSaleNumber('');
+                setUseOriginalNumber(false);
+                setStockWarningChecked(false);
               }}
             >
               Batal
             </Button>
-            <Button onClick={handleConfirmReorder}>
-              Ya, Buat Transaksi Ulang
+            <Button 
+              onClick={handleConfirmReorder}
+              disabled={!foundSale || !stockWarningChecked}
+              className={!stockWarningChecked ? "opacity-50 cursor-not-allowed" : ""}
+            >
+              Konfirmasi Transaksi Ulang
             </Button>
           </DialogFooter>
         </DialogContent>
