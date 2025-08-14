@@ -462,133 +462,140 @@ const subtotal = cart.reduce(
     }
   };
 
-  const processSaleMutation = useMutation({
-    mutationFn: async () => {
-      if (cart.length === 0) throw new Error("Cart is empty");
+ // ✅ Perbaikan processSaleMutation
+const processSaleMutation = useMutation({
+  mutationFn: async () => {
+    if (cart.length === 0) throw new Error("Cart is empty");
 
-      const totalAmount = total;
+    const totalAmount = total;
 
-      // For non-cash payments, ensure payment received equals total amount
-      const effectivePaymentReceived = paymentMethod !== "cash" ? totalAmount : paymentReceived;
+    // For non-cash payments, ensure payment received equals total amount
+    const effectivePaymentReceived = paymentMethod !== "cash" ? totalAmount : paymentReceived;
 
-      console.log("Payment validation:", {
-        paymentReceived: effectivePaymentReceived,
-        totalAmount,
-        paymentMethod,
-        sufficient: effectivePaymentReceived >= totalAmount,
-      });
+    console.log("Payment validation:", {
+      paymentReceived: effectivePaymentReceived,
+      totalAmount,
+      paymentMethod,
+      sufficient: effectivePaymentReceived >= totalAmount,
+    });
 
-      if (effectivePaymentReceived < totalAmount) {
-        throw new Error(
-          `Pembayaran kurang. Dibutuhkan: ${formatCurrency(totalAmount)}, Diterima: ${formatCurrency(effectivePaymentReceived)}`,
-        );
-      }
+    if (effectivePaymentReceived < totalAmount) {
+      throw new Error(
+        `Pembayaran kurang. Dibutuhkan: ${formatCurrency(totalAmount)}, Diterima: ${formatCurrency(effectivePaymentReceived)}`
+      );
+    }
 
-      // Generate sale number
-      const { data: saleNumber } = await supabase.rpc("generate_sale_number");
+    // ✅ FIX: Gunakan nomor lama jika re-order
+    let saleNumber: string;
+    if (useOriginalNumber && reorderSaleNumber) {
+      saleNumber = reorderSaleNumber;
+    } else {
+      const { data } = await supabase.rpc("generate_sale_number");
+      saleNumber = data;
+    }
 
-      // Create sale record with bank details if applicable
-      const saleData: any = {
-        sale_number: saleNumber,
-        customer_name: customerName || null,
-        subtotal,
-        tax_amount: 0,
-        total_amount: totalAmount,
-        payment_method: paymentMethod as any,
-        payment_received: effectivePaymentReceived,
-        change_amount: Math.max(0, effectivePaymentReceived - totalAmount),
-        created_by: user?.id,
-        cashier_id: user?.id,
-        notes: JSON.stringify({
-          bank_details: bankDetails || null,
-          discount_config: {
-            use_special_customer_calculation: receiptConfig.useSpecialCustomerCalculation,
-            global_discount_percentage: receiptConfig.discountPercentage,
-            show_amount: receiptConfig.showAmount,
-            show_dpp_faktur: receiptConfig.showDppFaktur,
-            show_discount: receiptConfig.showDiscount,
-            show_ppn11: receiptConfig.showPpn11
-          }
-        }),
-        invoice_status: paymentMethod === 'credit' ? 'belum_bayar' : 'lunas',
-      };
+    // Create sale record with bank details if applicable
+    const saleData: any = {
+      sale_number: saleNumber,
+      customer_name: customerName || null,
+      subtotal,
+      tax_amount: 0,
+      total_amount: totalAmount,
+      payment_method: paymentMethod as any,
+      payment_received: effectivePaymentReceived,
+      change_amount: Math.max(0, effectivePaymentReceived - totalAmount),
+      created_by: user?.id,
+      cashier_id: user?.id,
+      notes: JSON.stringify({
+        bank_details: bankDetails || null,
+        discount_config: {
+          use_special_customer_calculation: receiptConfig.useSpecialCustomerCalculation,
+          global_discount_percentage: receiptConfig.discountPercentage,
+          show_amount: receiptConfig.showAmount,
+          show_dpp_faktur: receiptConfig.showDppFaktur,
+          show_discount: receiptConfig.showDiscount,
+          show_ppn11: receiptConfig.showPpn11
+        }
+      }),
+      invoice_status: paymentMethod === 'credit' ? 'belum_bayar' : 'lunas',
+    };
 
-      const { data: sale, error: saleError } = await supabase
-        .from("sales")
-        .insert(saleData)
-        .select()
-        .single();
+    const { data: sale, error: saleError } = await supabase
+      .from("sales")
+      .insert(saleData)
+      .select()
+      .single();
 
-      if (saleError) throw saleError;
-      if (!sale) throw new Error("Failed to create sale record");
+    if (saleError) throw saleError;
+    if (!sale) throw new Error("Failed to create sale record");
 
-      // Create sale items with individual discount information
-      const saleItems = cart.map((item) => ({
-        sale_id: sale.id,
-        product_id: item.product.id,
-        unit_id: null, // Keep null for now, bisa dikembangkan nanti
-        unit_type: item.unitType, // Simpan unit type (pcs atau base_unit)
-        quantity: item.quantity,
-        unit_price: item.unitType === 'pcs' 
-          ? Number(item.product.price_per_pcs || item.product.price)
-          : Number(item.product.price),
-        subtotal: (item.unitType === 'pcs' 
-          ? Number(item.product.price_per_pcs || item.product.price)
-          : Number(item.product.price)) * item.quantity,
-        discount: item.customDiscount, // Save the item discount percentage
-      }));
+    // Create sale items with individual discount information
+    const saleItems = cart.map((item) => ({
+      sale_id: sale.id,
+      product_id: item.product.id,
+      unit_id: null,
+      unit_type: item.unitType,
+      quantity: item.quantity,
+      unit_price: item.unitType === 'pcs' 
+        ? Number(item.product.price_per_pcs || item.product.price)
+        : Number(item.product.price),
+      subtotal: (item.unitType === 'pcs' 
+        ? Number(item.product.price_per_pcs || item.product.price)
+        : Number(item.product.price)) * item.quantity,
+      discount: item.customDiscount,
+    }));
 
-      const { error: itemsError } = await supabase
-        .from("sale_items")
-        .insert(saleItems);
+    const { error: itemsError } = await supabase
+      .from("sale_items")
+      .insert(saleItems);
 
-      if (itemsError) throw itemsError;
+    if (itemsError) throw itemsError;
 
-      // Create stock movements for each item
-      const stockMovements = cart.map((item) => ({
-        product_id: item.product.id,
-        unit_id: null, // Keep null for now
-        unit_type: item.unitType, // Simpan unit type untuk stock movement
-        transaction_type: "outbound" as any,
-        quantity: item.quantity,
-        reference_number: saleNumber,
-        notes: `Sale: ${saleNumber}`,
-        created_by: user?.id,
-      }));
+    // Create stock movements for each item
+    const stockMovements = cart.map((item) => ({
+      product_id: item.product.id,
+      unit_id: null,
+      unit_type: item.unitType,
+      transaction_type: "outbound" as any,
+      quantity: item.quantity,
+      reference_number: saleNumber,
+      notes: `Sale: ${saleNumber}`,
+      created_by: user?.id,
+    }));
 
-      const { error: stockError } = await supabase
-        .from("stock_movements")
-        .insert(stockMovements);
+    const { error: stockError } = await supabase
+      .from("stock_movements")
+      .insert(stockMovements);
 
-      if (stockError) throw stockError;
+    if (stockError) throw stockError;
 
-      return sale;
-    },
-    onSuccess: (sale) => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
-      setCart([]);
-      setCustomerName("");
-      setPaymentReceived(0);
-      setBankDetails("");
-      setSelectedCashier("");
-      toast({
-        title: "Success",
-        description: `Sale ${sale.sale_number} completed successfully!`,
-      });
+    return sale;
+  },
+  onSuccess: (sale) => {
+    queryClient.invalidateQueries({ queryKey: ["products"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    setCart([]);
+    setCustomerName("");
+    setPaymentReceived(0);
+    setBankDetails("");
+    setSelectedCashier("");
+    toast({
+      title: "Success",
+      description: `Sale ${sale.sale_number} completed successfully!`,
+    });
 
-      // Generate and download receipt with updated settings
-      generateReceipt(sale);
-    },
-    onError: (error: any) => {
-      console.error("Sale processing error:", error);
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+    generateReceipt(sale);
+  },
+  onError: (error: any) => {
+    console.error("Sale processing error:", error);
+    toast({
+      title: "Error",
+      description: error.message,
+      variant: "destructive",
+    });
+  },
+});
+
 
   const generateReceipt = async (sale: any) => {
     const logoUrl = settings?.company_logo ? settings.company_logo : "";
