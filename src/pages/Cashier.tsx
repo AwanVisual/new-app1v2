@@ -80,21 +80,21 @@ const Cashier = () => {
   const [stockConfirmed, setStockConfirmed] = useState(false);
 
   const searchSaleMutation = useMutation({
-    mutationFn: async (saleNumber: string) => {
-      const { data, error } = await supabase
-        .from('sales')
-        .select(`
+  mutationFn: async (saleNumber: string) => {
+    const { data, error } = await supabase
+      .from("sales")
+      .select(`
+        *,
+        sale_items (
           *,
-          sale_items (
-            *,
-            product:products (*)
-          )
-        `)
-        .eq('sale_number', saleNumber)
-        .single();
-      
-      if (error) throw error;
-      return data;
+          product:products (*)
+        )
+      `)
+      .eq("sale_number", saleNumber)
+      .single();
+
+    if (error) throw error;
+    return data;
     },
     onSuccess: (data) => {
       setFoundSale(data);
