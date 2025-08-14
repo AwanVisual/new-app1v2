@@ -73,7 +73,8 @@ const Cashier = () => {
   });
   const [selectedCashier, setSelectedCashier] = useState<string>("");
   const [reorderDialogOpen, setReorderDialogOpen] = useState(false);
-  const [reorderSaleNumber, setReorderSaleNumber] = useState("");
+  const [reorderSaleNumber, setReorderSaleNumber] = useState<string | null>(null);
+  const [useOriginalNumber, setUseOriginalNumber] = useState(false);
   const [foundSale, setFoundSale] = useState<any>(null);
   const [stockWarningChecked, setStockWarningChecked] = useState(false);
   const [showReorderConfirm, setShowReorderConfirm] = useState(false);
