@@ -1283,9 +1283,9 @@ const processSaleMutation = useMutation({
                         <strong>Penting!</strong> Setelah melakukan transaksi ulang, pastikan untuk:
                       </p>
                       <ul className="list-disc list-inside space-y-1">
-                        <li>Memeriksa kondisi fisik barang di gudang</li>
-                        <li>Menyesuaikan stok sistem dengan kondisi aktual</li>
-                        <li>Memastikan ketersediaan barang sebelum penjualan</li>
+                          <li>Memeriksa jumlah stok fisik barang di gudang</li>
+                         <li>Menyesuaikan stok sistem dengan stok fisik sebelum transaksi ulang</li>
+                        <li>Memastikan stok tersedia dan sesuai sebelum penjualan</li>
                       </ul>
                     </div>
                   </div>
