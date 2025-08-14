@@ -149,6 +149,11 @@ const Cashier = () => {
   setCart(newCartItems);
   setCustomerName(foundSale.customer_name || "");
 
+  // ✅ SIMPAN nomor & id transaksi lama untuk dipakai nanti
+  setReorderSaleNumber(foundSale.sale_number);
+  setReorderSaleId(foundSale.id);
+  setUseOriginalNumber(true);
+    
   // Close dialogs
   setIsConfirmReorderOpen(false);
   setReorderDialogOpen(false);
