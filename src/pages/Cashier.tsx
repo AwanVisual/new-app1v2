@@ -500,7 +500,7 @@ const subtotal = cart.reduce(
         created_by: user?.id,
         cashier_id: user?.id,
         notes: JSON.stringify({
-          sales_person: selectedCashier || null,
+      const saleNumber = foundSale.sale_number;
           bank_details: bankDetails || null,
           discount_config: {
             use_special_customer_calculation: receiptConfig.useSpecialCustomerCalculation,
@@ -1113,22 +1113,14 @@ const subtotal = cart.reduce(
             <Button 
               onClick={handleSearchSale}
               disabled={searchSaleMutation.isPending}
-            >
-              {searchSaleMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Mencari...
-                </>
-              ) : (
-                'Cari Transaksi'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reorder Confirmation Dialog */}
-      <Dialog open={isConfirmReorderOpen} onOpenChange={setIsConfirmReorderOpen}>
+            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span className="text-sm font-medium text-blue-800">
+                  Transaksi ulang akan menggunakan nomor yang sama: {foundSale.sale_number}
+                </span>
+              </div>
+            </div>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Konfirmasi Transaksi Ulang</DialogTitle>
