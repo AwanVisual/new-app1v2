@@ -476,36 +476,30 @@ const processSaleMutation = useMutation({
     if (cart.length === 0) throw new Error("Cart is empty");
 
     const totalAmount = total;
-
-    // For non-cash payments, ensure payment received equals total amount
     const effectivePaymentReceived =
       paymentMethod !== "cash" ? totalAmount : paymentReceived;
 
-    console.log("Payment validation:", {
-      paymentReceived: effectivePaymentReceived,
-      totalAmount,
-      paymentMethod,
-      sufficient: effectivePaymentReceived >= totalAmount,
-    });
-
     if (effectivePaymentReceived < totalAmount) {
       throw new Error(
-        `Pembayaran kurang. Dibutuhkan: ${formatCurrency(
-          totalAmount
-        )}, Diterima: ${formatCurrency(effectivePaymentReceived)}`
+        `Pembayaran kurang. Dibutuhkan: ${formatCurrency(totalAmount)}, Diterima: ${formatCurrency(effectivePaymentReceived)}`
       );
     }
 
-    // ✅ FIX: Gunakan nomor lama jika re-order
+    // Tentukan nomor yang dipakai
     let saleNumber: string;
-    if (useOriginalNumber && reorderSaleNumber) {
+    let targetSaleId: string | null = null;
+
+    if (useOriginalNumber && reorderSaleNumber && reorderSaleId) {
+      // ✅ Re-order: pakai nomor & id lama, dan lakukan UPDATE
       saleNumber = reorderSaleNumber;
+      targetSaleId = reorderSaleId;
     } else {
+      // Transaksi baru: generate nomor & lakukan INSERT
       const { data } = await supabase.rpc("generate_sale_number");
       saleNumber = data;
     }
 
-    // Create sale record with bank details if applicable
+    // Data sales yang akan disimpan
     const saleData: any = {
       sale_number: saleNumber,
       customer_name: customerName || null,
@@ -520,8 +514,7 @@ const processSaleMutation = useMutation({
       notes: JSON.stringify({
         bank_details: bankDetails || null,
         discount_config: {
-          use_special_customer_calculation:
-            receiptConfig.useSpecialCustomerCalculation,
+          use_special_customer_calculation: receiptConfig.useSpecialCustomerCalculation,
           global_discount_percentage: receiptConfig.discountPercentage,
           show_amount: receiptConfig.showAmount,
           show_dpp_faktur: receiptConfig.showDppFaktur,
@@ -529,74 +522,145 @@ const processSaleMutation = useMutation({
           show_ppn11: receiptConfig.showPpn11,
         },
       }),
-      invoice_status:
-        paymentMethod === "credit" ? "belum_bayar" : "lunas",
+      invoice_status: paymentMethod === "credit" ? "belum_bayar" : "lunas",
     };
 
-    const { data: sale, error: saleError } = await supabase
-      .from("sales")
-      .insert(saleData)
-      .select()
-      .single();
+    let saleRow: any;
 
-    if (saleError) throw saleError;
-    if (!sale) throw new Error("Failed to create sale record");
+    if (targetSaleId) {
+      // ✅ RE-ORDER MODE: UPDATE baris lama (hindari duplicate key)
+      const { data: updated, error: updErr } = await supabase
+        .from("sales")
+        .update(saleData)
+        .eq("id", targetSaleId)
+        .select()
+        .single();
+      if (updErr) throw updErr;
+      saleRow = updated;
 
-    // Create sale items with individual discount information
-    const saleItems = cart.map((item) => ({
-      sale_id: sale.id,
-      product_id: item.product.id,
-      unit_id: null,
-      unit_type: item.unitType,
-      quantity: item.quantity,
-      unit_price:
-        item.unitType === "pcs"
-          ? Number(item.product.price_per_pcs || item.product.price)
-          : Number(item.product.price),
-      subtotal:
-        (item.unitType === "pcs"
-          ? Number(item.product.price_per_pcs || item.product.price)
-          : Number(item.product.price)) * item.quantity,
-      discount: item.customDiscount,
-    }));
+      // Hapus item lama
+      const { error: delItemsErr } = await supabase
+        .from("sale_items")
+        .delete()
+        .eq("sale_id", targetSaleId);
+      if (delItemsErr) throw delItemsErr;
 
-    const { error: itemsError } = await supabase
-      .from("sale_items")
-      .insert(saleItems);
+      // Tulis ulang item baru
+      const saleItems = cart.map((item) => ({
+        sale_id: targetSaleId as string,
+        product_id: item.product.id,
+        unit_id: null,
+        unit_type: item.unitType,
+        quantity: item.quantity,
+        unit_price:
+          item.unitType === "pcs"
+            ? Number(item.product.price_per_pcs || item.product.price)
+            : Number(item.product.price),
+        subtotal:
+          (item.unitType === "pcs"
+            ? Number(item.product.price_per_pcs || item.product.price)
+            : Number(item.product.price)) * item.quantity,
+        discount: item.customDiscount,
+      }));
 
-    if (itemsError) throw itemsError;
+      const { error: itemsErr } = await supabase
+        .from("sale_items")
+        .insert(saleItems);
+      if (itemsErr) throw itemsErr;
 
-    // Create stock movements for each item
-    const stockMovements = cart.map((item) => ({
-      product_id: item.product.id,
-      unit_id: null,
-      unit_type: item.unitType,
-      transaction_type: "outbound" as any,
-      quantity: item.quantity,
-      reference_number: saleNumber,
-      notes: `Sale: ${saleNumber}`,
-      created_by: user?.id,
-    }));
+      // (Opsional tapi disarankan) Reset stock_movements utk nomor ini, lalu tulis ulang
+      await supabase
+        .from("stock_movements")
+        .delete()
+        .eq("reference_number", saleNumber)
+        .eq("transaction_type", "outbound");
 
-    const { error: stockError } = await supabase
-      .from("stock_movements")
-      .insert(stockMovements);
+      const stockMovements = cart.map((item) => ({
+        product_id: item.product.id,
+        unit_id: null,
+        unit_type: item.unitType,
+        transaction_type: "outbound" as any,
+        quantity: item.quantity,
+        reference_number: saleNumber,
+        notes: `Sale: ${saleNumber}`,
+        created_by: user?.id,
+      }));
 
-    if (stockError) throw stockError;
+      const { error: stockErr } = await supabase
+        .from("stock_movements")
+        .insert(stockMovements);
+      if (stockErr) throw stockErr;
 
-    return sale;
+    } else {
+      // ✅ TRANSAKSI BARU: INSERT sales + items + stock_movements
+      const { data: sale, error: saleError } = await supabase
+        .from("sales")
+        .insert(saleData)
+        .select()
+        .single();
+      if (saleError) throw saleError;
+      saleRow = sale;
+
+      const saleItems = cart.map((item) => ({
+        sale_id: saleRow.id,
+        product_id: item.product.id,
+        unit_id: null,
+        unit_type: item.unitType,
+        quantity: item.quantity,
+        unit_price:
+          item.unitType === "pcs"
+            ? Number(item.product.price_per_pcs || item.product.price)
+            : Number(item.product.price),
+        subtotal:
+          (item.unitType === "pcs"
+            ? Number(item.product.price_per_pcs || item.product.price)
+            : Number(item.product.price)) * item.quantity,
+        discount: item.customDiscount,
+      }));
+
+      const { error: itemsErr } = await supabase
+        .from("sale_items")
+        .insert(saleItems);
+      if (itemsErr) throw itemsErr;
+
+      const stockMovements = cart.map((item) => ({
+        product_id: item.product.id,
+        unit_id: null,
+        unit_type: item.unitType,
+        transaction_type: "outbound" as any,
+        quantity: item.quantity,
+        reference_number: saleNumber,
+        notes: `Sale: ${saleNumber}`,
+        created_by: user?.id,
+      }));
+
+      const { error: stockErr } = await supabase
+        .from("stock_movements")
+        .insert(stockMovements);
+      if (stockErr) throw stockErr;
+    }
+
+    return saleRow;
   },
   onSuccess: (sale) => {
     queryClient.invalidateQueries({ queryKey: ["products"] });
     queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+
+    // Reset UI
     setCart([]);
     setCustomerName("");
     setPaymentReceived(0);
     setBankDetails("");
     setSelectedCashier("");
+
+    // Reset re-order flags setelah sukses
+    setUseOriginalNumber(false);
+    setReorderSaleNumber("");
+    setReorderSaleId(null);
+
     toast({
       title: "Success",
-      description: `Sale ${sale.sale_number} completed successfully!`,
+      description: `Sale ${sale.sale_number} saved successfully!`,
     });
 
     generateReceipt(sale);
@@ -610,6 +674,7 @@ const processSaleMutation = useMutation({
     });
   },
 });
+
 
 
   const generateReceipt = async (sale: any) => {
