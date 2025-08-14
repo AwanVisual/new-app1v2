@@ -50,6 +50,7 @@ interface ReceiptFieldsConfig {
 }
 
 const Cashier = () => {
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -77,8 +78,6 @@ const Cashier = () => {
   const [stockWarningChecked, setStockWarningChecked] = useState(false);
   const [showReorderConfirm, setShowReorderConfirm] = useState(false);
   const [stockConfirmed, setStockConfirmed] = useState(false);
-  const [isReorderTransaction, setIsReorderTransaction] = useState(false);
-  const [reorderSaleNumber, setReorderSaleNumber] = useState<string>('');
 
   const searchSaleMutation = useMutation({
   mutationFn: async (saleNumber: string) => {
@@ -104,10 +103,6 @@ const Cashier = () => {
         title: "Transaksi ditemukan",
         description: `Transaksi ${data.sale_number} berhasil ditemukan`,
       });
-      
-      // Reset reorder flags
-      setIsReorderTransaction(false);
-      setReorderSaleNumber('');
     },
     onError: (error: any) => {
       toast({
@@ -135,10 +130,6 @@ const Cashier = () => {
   const handleConfirmReorder = () => {
   if (!foundSale) return;
 
-    // Set flag bahwa ini adalah transaksi ulang
-    setIsReorderTransaction(true);
-    setReorderSaleNumber(foundSale.sale_number);
-    
   // Clear current cart
   setCart([]);
 
@@ -161,6 +152,7 @@ const Cashier = () => {
   setReorderDialogOpen(false);
   setFoundSale(null);
   setReorderSaleNumber("");
+  setUseOriginalNumber(false);
   setStockConfirmed(false);
 
   toast({
@@ -493,14 +485,8 @@ const subtotal = cart.reduce(
       }
 
       // Generate sale number
-      // Generate sale number - gunakan nomor reorder jika ada
-      let saleNumber;
-      if (isReorderTransaction && reorderSaleNumber) {
-        saleNumber = reorderSaleNumber;
-      } else {
-        const { data: generatedNumber } = await supabase.rpc('generate_sale_number');
-        saleNumber = generatedNumber;
-      }
+      const { data: saleNumber } = await supabase.rpc("generate_sale_number");
+
       // Create sale record with bank details if applicable
       const saleData: any = {
         sale_number: saleNumber,
@@ -526,8 +512,6 @@ const subtotal = cart.reduce(
         }),
         invoice_status: paymentMethod === 'credit' ? 'belum_bayar' : 'lunas',
       };
-
-      
 
       const { data: sale, error: saleError } = await supabase
         .from("sales")
@@ -1129,7 +1113,7 @@ const subtotal = cart.reduce(
             >
               {searchSaleMutation.isPending ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Mencari...
                 </>
               ) : (
