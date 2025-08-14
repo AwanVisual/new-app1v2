@@ -50,7 +50,6 @@ interface ReceiptFieldsConfig {
 }
 
 const Cashier = () => {
-  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [cart, setCart] = useState<CartItem[]>([]);
