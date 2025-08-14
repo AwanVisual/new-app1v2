@@ -1280,7 +1280,7 @@ const processSaleMutation = useMutation({
                     </Label>
                     <div className="text-sm text-amber-700">
                       <p className="mb-2">
-                        <strong>Penting!</strong> Setelah melakukan transaksi ulang, pastikan untuk:
+                        <strong>Penting!</strong> Setelah/Sebelum melakukan transaksi ulang, pastikan untuk:
                       </p>
                       <ul className="list-disc list-inside space-y-1">
                           <li>Memeriksa jumlah stok fisik barang di gudang</li>
