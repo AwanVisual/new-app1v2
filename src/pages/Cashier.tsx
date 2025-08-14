@@ -78,6 +78,8 @@ const Cashier = () => {
   const [stockWarningChecked, setStockWarningChecked] = useState(false);
   const [showReorderConfirm, setShowReorderConfirm] = useState(false);
   const [stockConfirmed, setStockConfirmed] = useState(false);
+  const [reorderSaleId, setReorderSaleId] = useState<string | null>(null);
+
 
   const searchSaleMutation = useMutation({
   mutationFn: async (saleNumber: string) => {
