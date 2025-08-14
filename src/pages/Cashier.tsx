@@ -152,7 +152,6 @@ const Cashier = () => {
   setReorderDialogOpen(false);
   setFoundSale(null);
   setReorderSaleNumber("");
-  setUseOriginalNumber(false);
   setStockConfirmed(false);
 
   toast({
@@ -500,7 +499,6 @@ const subtotal = cart.reduce(
         created_by: user?.id,
         cashier_id: user?.id,
         notes: JSON.stringify({
-      const saleNumber = foundSale.sale_number;
           bank_details: bankDetails || null,
           discount_config: {
             use_special_customer_calculation: receiptConfig.useSpecialCustomerCalculation,
@@ -1113,14 +1111,22 @@ const subtotal = cart.reduce(
             <Button 
               onClick={handleSearchSale}
               disabled={searchSaleMutation.isPending}
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-sm font-medium text-blue-800">
-                  Transaksi ulang akan menggunakan nomor yang sama: {foundSale.sale_number}
-                </span>
-              </div>
-            </div>
+            >
+              {searchSaleMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Mencari...
+                </>
+              ) : (
+                "Cari Transaksi"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Reorder Dialog */}
+      <Dialog open={isConfirmReorderOpen} onOpenChange={setIsConfirmReorderOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Konfirmasi Transaksi Ulang</DialogTitle>
@@ -1574,121 +1580,6 @@ const subtotal = cart.reduce(
         onCartUpdate={setCart}
         onProceedToPayment={handlePreCheckoutProceed}
       />
-      
-      {/* Confirm Reorder Dialog */}
-      <Dialog open={isConfirmReorderOpen} onOpenChange={setIsConfirmReorderOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Konfirmasi Transaksi Ulang</DialogTitle>
-          </DialogHeader>
-          
-          {foundSale && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <Label className="text-sm font-medium">Nomor Penjualan:</Label>
-                  <p className="font-mono">{foundSale.sale_number}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Customer:</Label>
-                  <p>{foundSale.customer_name || 'Walk-in Customer'}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Tanggal:</Label>
-                  <p>{new Date(foundSale.created_at).toLocaleDateString('id-ID')}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Total:</Label>
-                  <p className="font-bold text-green-600">
-                    {formatCurrency(Number(foundSale.total_amount))}
-                  </p>
-                </div>
-              </div>
-              
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Item Transaksi:</Label>
-                <div className="border rounded-lg">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Produk</TableHead>
-                        <TableHead>Qty</TableHead>
-                        <TableHead>Harga</TableHead>
-                        <TableHead>Discount</TableHead>
-                        <TableHead>Subtotal</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {foundSale.sale_items?.map((item: any, index: number) => (
-                        <TableRow key={index}>
-                          <TableCell>{item.products?.name || 'Unknown Product'}</TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                          <TableCell>{formatCurrency(Number(item.unit_price))}</TableCell>
-                          <TableCell>{item.discount || 0}%</TableCell>
-                          <TableCell>{formatCurrency(Number(item.subtotal))}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-              
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>Perhatian:</strong> Transaksi ini akan disalin ke keranjang belanja. 
-                  Keranjang saat ini akan dikosongkan dan diganti dengan item dari transaksi yang dipilih.
-                </p>
-              </div>
-
-              {/* Stock Confirmation */}
-              <div className="border border-amber-200 bg-amber-50 rounded-lg p-4">
-                <h3 className="font-semibold text-amber-800 mb-3">⚠️ Konfirmasi Penyesuaian Stok</h3>
-                <div className="space-y-2 text-sm text-amber-700 mb-4">
-                  <p>
-                    <strong>Penting:</strong> Transaksi ulang akan menambahkan item ke keranjang, 
-                    namun <strong>tidak otomatis mengurangi stok</strong> dari sistem.
-                  </p>
-                  <p>
-                    Pastikan untuk <strong>memeriksa dan menyesuaikan stok barang secara manual</strong> 
-                    sesuai dengan kondisi fisik di gudang/toko.
-                  </p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="stockConfirm" 
-                    checked={stockConfirmed}
-                    onCheckedChange={(checked) => setStockConfirmed(checked as boolean)}
-                  />
-                  <Label htmlFor="stockConfirm" className="text-sm font-medium text-amber-800">
-                    Saya memahami dan akan menyesuaikan stok barang secara manual
-                  </Label>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setIsConfirmReorderOpen(false);
-                setFoundSale(null);
-                setUseOriginalNumber(false);
-                setStockConfirmed(false);
-              }}
-            >
-              Batal
-            </Button>
-            <Button 
-              onClick={handleConfirmReorder}
-              disabled={!stockConfirmed}
-              className={!stockConfirmed ? "opacity-50 cursor-not-allowed" : ""}
-            >
-              Konfirmasi Transaksi Ulang
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
