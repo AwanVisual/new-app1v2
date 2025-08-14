@@ -470,7 +470,8 @@ const processSaleMutation = useMutation({
     const totalAmount = total;
 
     // For non-cash payments, ensure payment received equals total amount
-    const effectivePaymentReceived = paymentMethod !== "cash" ? totalAmount : paymentReceived;
+    const effectivePaymentReceived =
+      paymentMethod !== "cash" ? totalAmount : paymentReceived;
 
     console.log("Payment validation:", {
       paymentReceived: effectivePaymentReceived,
@@ -481,43 +482,48 @@ const processSaleMutation = useMutation({
 
     if (effectivePaymentReceived < totalAmount) {
       throw new Error(
-        `Pembayaran kurang. Dibutuhkan: ${formatCurrency(totalAmount)}, Diterima: ${formatCurrency(effectivePaymentReceived)}`
+        `Pembayaran kurang. Dibutuhkan: ${formatCurrency(
+          totalAmount
+        )}, Diterima: ${formatCurrency(effectivePaymentReceived)}`
       );
     }
 
     // ✅ FIX: Gunakan nomor lama jika re-order
-let saleNumber: string;
-if (useOriginalNumber && reorderSaleNumber) {
-  saleNumber = reorderSaleNumber; // nomor lama
-} else {
-  const { data } = await supabase.rpc("generate_sale_number");
-  saleNumber = data;
-}
-
-const saleData: any = {
-  sale_number: saleNumber, // kirim manual ke DB
-  customer_name: customerName || null,
-  subtotal,
-  tax_amount: 0,
-  total_amount: totalAmount,
-  payment_method: paymentMethod as any,
-  payment_received: effectivePaymentReceived,
-  change_amount: Math.max(0, effectivePaymentReceived - totalAmount),
-  created_by: user?.id,
-  cashier_id: user?.id,
-  notes: JSON.stringify({
-    bank_details: bankDetails || null,
-    discount_config: {
-      use_special_customer_calculation: receiptConfig.useSpecialCustomerCalculation,
-      global_discount_percentage: receiptConfig.discountPercentage,
-      show_amount: receiptConfig.showAmount,
-      show_dpp_faktur: receiptConfig.showDppFaktur,
-      show_discount: receiptConfig.showDiscount,
-      show_ppn11: receiptConfig.showPpn11
+    let saleNumber: string;
+    if (useOriginalNumber && reorderSaleNumber) {
+      saleNumber = reorderSaleNumber;
+    } else {
+      const { data } = await supabase.rpc("generate_sale_number");
+      saleNumber = data;
     }
-  }),
-  invoice_status: paymentMethod === 'credit' ? 'belum_bayar' : 'lunas',
-};
+
+    // Create sale record with bank details if applicable
+    const saleData: any = {
+      sale_number: saleNumber,
+      customer_name: customerName || null,
+      subtotal,
+      tax_amount: 0,
+      total_amount: totalAmount,
+      payment_method: paymentMethod as any,
+      payment_received: effectivePaymentReceived,
+      change_amount: Math.max(0, effectivePaymentReceived - totalAmount),
+      created_by: user?.id,
+      cashier_id: user?.id,
+      notes: JSON.stringify({
+        bank_details: bankDetails || null,
+        discount_config: {
+          use_special_customer_calculation:
+            receiptConfig.useSpecialCustomerCalculation,
+          global_discount_percentage: receiptConfig.discountPercentage,
+          show_amount: receiptConfig.showAmount,
+          show_dpp_faktur: receiptConfig.showDppFaktur,
+          show_discount: receiptConfig.showDiscount,
+          show_ppn11: receiptConfig.showPpn11,
+        },
+      }),
+      invoice_status:
+        paymentMethod === "credit" ? "belum_bayar" : "lunas",
+    };
 
     const { data: sale, error: saleError } = await supabase
       .from("sales")
@@ -535,12 +541,14 @@ const saleData: any = {
       unit_id: null,
       unit_type: item.unitType,
       quantity: item.quantity,
-      unit_price: item.unitType === 'pcs' 
-        ? Number(item.product.price_per_pcs || item.product.price)
-        : Number(item.product.price),
-      subtotal: (item.unitType === 'pcs' 
-        ? Number(item.product.price_per_pcs || item.product.price)
-        : Number(item.product.price)) * item.quantity,
+      unit_price:
+        item.unitType === "pcs"
+          ? Number(item.product.price_per_pcs || item.product.price)
+          : Number(item.product.price),
+      subtotal:
+        (item.unitType === "pcs"
+          ? Number(item.product.price_per_pcs || item.product.price)
+          : Number(item.product.price)) * item.quantity,
       discount: item.customDiscount,
     }));
 
