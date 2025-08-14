@@ -1303,7 +1303,7 @@ const processSaleMutation = useMutation({
               disabled={!stockConfirmed}
               className={!stockConfirmed ? "opacity-50 cursor-not-allowed" : ""}
             >
-              Konfirmasi Transaksi Ulang
+              edit items Transaksi Ulang
             </Button>
           </DialogFooter>
         </DialogContent>
