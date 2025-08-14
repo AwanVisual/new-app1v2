@@ -314,10 +314,10 @@ const calculateDetailedPricing = (item: CartItem) => {
     }
   };
 
-  const subtotal = cart.reduce(
-    (sum, item) => sum + Number(item.product.price) * item.quantity,
-    0,
-  );
+const subtotal = cart.reduce(
+  (sum, item) => sum + Number(item.product?.price || 0) * item.quantity,
+  0
+);
 
   // Calculate final total using DPP Faktur + PPN 11% with per-item discounts
   const calculateFinalTotal = () => {
