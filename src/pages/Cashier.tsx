@@ -1264,23 +1264,7 @@ const processSaleMutation = useMutation({
                 </div>
               </div>
 
-              {/* Transaction Number Choice */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold mb-3">Pilihan Nomor Transaksi</h3>
-                <RadioGroup 
-                  value={useOriginalNumber ? "original" : "new"} 
-                  onValueChange={(value) => setUseOriginalNumber(value === "original")}
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="new" id="new" />
-                    <Label htmlFor="new">Nomor baru (otomatis)</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="original" id="original" />
-                    <Label htmlFor="original">Gunakan nomor asli: {foundSale.sale_number}</Label>
-                  </div>
-                </RadioGroup>
-              </div>
+
 
               {/* Stock Confirmation */}
               <div className="border rounded-lg p-4 bg-amber-50 border-amber-200">
