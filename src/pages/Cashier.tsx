@@ -484,17 +484,9 @@ const subtotal = cart.reduce(
         );
       }
 
-     let saleNumber: string;
-     
-     if (isReorderTransaction && reorderSaleNumber) {
-       // Gunakan nomor yang sama untuk transaksi ulang
-       saleNumber = reorderSaleNumber;
-       console.log('Using reorder sale number:', saleNumber);
-     } else {
-       // Generate nomor baru untuk transaksi normal
-       saleNumber = await generateSaleNumber();
-       console.log('Generated new sale number:', saleNumber);
-     }
+      // Generate sale number
+      const { data: saleNumber } = await supabase.rpc("generate_sale_number");
+
       // Create sale record with bank details if applicable
       const saleData: any = {
         sale_number: saleNumber,
