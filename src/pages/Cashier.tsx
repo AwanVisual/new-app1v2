@@ -171,54 +171,65 @@ const Cashier = () => {
     }
   }, [paymentMethod, cart]);
 
-  const calculateDetailedPricing = (item: CartItem) => {
-    const price = item.unitType === 'pcs' 
-      ? Number(item.product.price_per_pcs || item.product.price)
-      : Number(item.product.price);
-    const quantity = item.quantity;
-    const itemDiscount = item.customDiscount || 0;
+const calculateDetailedPricing = (item: CartItem) => {
+  if (!item?.product) {
+    return {
+      amount: 0,
+      dpp11: 0,
+      discount: 0,
+      dppFaktur: 0,
+      dppLain: 0,
+      ppn11: 0,
+      ppn12: 0,
+      finalItemTotal: 0,
+    };
+  }
 
-    if (receiptConfig.useSpecialCustomerCalculation) {
-      // Special customer calculation (existing logic)
-      const amount = quantity * price;
-      const dpp11 = (100 / 111) * price;
-      const discount = (itemDiscount / 100) * dpp11;
-      const dppFaktur = dpp11 - discount;
-      const dppLain = (11 / 12) * dppFaktur;
+  const basePrice = Number(item.product?.price || 0);
+  const price =
+    item.unitType === "pcs"
+      ? Number(item.product?.price_per_pcs || basePrice)
+      : basePrice;
+  const quantity = item.quantity;
+  const itemDiscount = item.customDiscount || 0;
 
-      // PPN 11% and PPN 12% must return the same value
-      const ppn11 = 0.11 * dppFaktur;
-      const ppn12 = ppn11; // Same value as PPN 11%
+  if (receiptConfig.useSpecialCustomerCalculation) {
+    const amount = quantity * price;
+    const dpp11 = (100 / 111) * price;
+    const discount = (itemDiscount / 100) * dpp11;
+    const dppFaktur = dpp11 - discount;
+    const dppLain = (11 / 12) * dppFaktur;
 
-      return {
-        amount,
-        dpp11: dpp11 * quantity,
-        discount: discount * quantity,
-        dppFaktur: dppFaktur * quantity,
-        dppLain: dppLain * quantity,
-        ppn11: ppn11 * quantity,
-        ppn12: ppn12 * quantity,
-        finalItemTotal: (dppFaktur + ppn11) * quantity,
-      };
-    } else {
-      // Simple discount calculation - direct price reduction
-      const discountAmount = (itemDiscount / 100) * price;
-      const discountedPrice = price - discountAmount;
-      const finalItemTotal = discountedPrice * quantity;
-      
-      return {
-        amount: quantity * price,
-        dpp11: 0,
-        discount: discountAmount * quantity,
-        dppFaktur: discountedPrice * quantity,
-        dppLain: 0,
-        ppn11: 0,
-        ppn12: 0,
-        finalItemTotal: finalItemTotal,
-      };
-    }
-  };
+    const ppn11 = 0.11 * dppFaktur;
+    const ppn12 = ppn11;
 
+    return {
+      amount,
+      dpp11: dpp11 * quantity,
+      discount: discount * quantity,
+      dppFaktur: dppFaktur * quantity,
+      dppLain: dppLain * quantity,
+      ppn11: ppn11 * quantity,
+      ppn12: ppn12 * quantity,
+      finalItemTotal: (dppFaktur + ppn11) * quantity,
+    };
+  } else {
+    const discountAmount = (itemDiscount / 100) * price;
+    const discountedPrice = price - discountAmount;
+    const finalItemTotal = discountedPrice * quantity;
+
+    return {
+      amount: quantity * price,
+      dpp11: 0,
+      discount: discountAmount * quantity,
+      dppFaktur: discountedPrice * quantity,
+      dppLain: 0,
+      ppn11: 0,
+      ppn12: 0,
+      finalItemTotal,
+    };
+  }
+};
   const { data: products } = useReactQuery({
     queryKey: ["products"],
     queryFn: async () => {
