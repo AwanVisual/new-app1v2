@@ -128,35 +128,38 @@ const Cashier = () => {
   };
 
   const handleConfirmReorder = () => {
-    if (!foundSale) return;
-    
-    // Clear current cart
-    setCart([]);
-    
-    // Add items from found sale to cart
-    const newCartItems: CartItem[] = foundSale.sale_items?.map((item: any) => ({
-      product: item.products,
-      quantity: item.quantity,
-      unitType: item.unit_type || 'base_unit',
-      customDiscount: item.discount || 0,
-    })) || [];
-    
-    setCart(newCartItems);
-    setCustomerName(foundSale.customer_name || "");
-    
-    // Close dialogs
-    setIsConfirmReorderOpen(false);
-    setReorderDialogOpen(false);
-    setFoundSale(null);
-    setReorderSaleNumber("");
-    setUseOriginalNumber(false);
-    setStockConfirmed(false);
-    
-    toast({
-      title: "Transaksi berhasil disalin",
-      description: `${newCartItems.length} item telah ditambahkan ke keranjang`,
-    });
-  };
+  if (!foundSale) return;
+
+  // Clear current cart
+  setCart([]);
+
+  // Add items from found sale to cart (dengan perbaikan alias dan filter null)
+  const newCartItems: CartItem[] =
+    foundSale.sale_items
+      ?.map((item: any) => ({
+        product: item.product || item.products || null,
+        quantity: item.quantity,
+        unitType: item.unit_type || "base_unit",
+        customDiscount: item.discount || 0,
+      }))
+      .filter((ci) => ci.product) || [];
+
+  setCart(newCartItems);
+  setCustomerName(foundSale.customer_name || "");
+
+  // Close dialogs
+  setIsConfirmReorderOpen(false);
+  setReorderDialogOpen(false);
+  setFoundSale(null);
+  setReorderSaleNumber("");
+  setUseOriginalNumber(false);
+  setStockConfirmed(false);
+
+  toast({
+    title: "Transaksi berhasil disalin",
+    description: `${newCartItems.length} item telah ditambahkan ke keranjang`,
+  });
+};
 
   // Update payment received when payment method changes
   useEffect(() => {
