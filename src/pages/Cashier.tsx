@@ -151,9 +151,10 @@ const Cashier = () => {
   setIsConfirmReorderOpen(false);
   setReorderDialogOpen(false);
   setFoundSale(null);
-  setReorderSaleNumber("");
-  setUseOriginalNumber(false);
-  setStockConfirmed(false);
+  setReorderSaleNumber(foundSale.sale_number); // ✅ Simpan nomor transaksi lama
+setUseOriginalNumber(true); // ✅ Aktifkan pakai nomor lama
+setStockConfirmed(false);
+
 
   toast({
     title: "Transaksi berhasil disalin",
