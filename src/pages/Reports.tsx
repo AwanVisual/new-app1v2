@@ -1386,6 +1386,22 @@ const Reports = () => {
                   ))}
                 </div>
 
+                <div className="border-t pt-4">
+                  <div className="text-right space-y-2">
+                    <div className="text-lg font-semibold">
+                      Total: {formatCurrency(
+                        editItemsData.reduce((total, item) => {
+                          const price = Number(item.unit_price);
+                          const quantity = item.quantity;
+                          const discount = item.discount || 0;
+                          const dpp11 = (100 / 111) * price;
+                          const discountAmount = (discount / 100) * dpp11;
+                          const dppFaktur = dpp11 - discountAmount;
+                          const ppn11 = 0.11 * dppFaktur;
+                          return total + (dppFaktur + ppn11) * quantity;
+                        }, 0)
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
