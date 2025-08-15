@@ -637,13 +637,13 @@ const Reports = () => {
     }
 
     checkPageBreak(0.5);
-    pdf.text('DPP Faktur:', leftMargin + 14.0, yPosition);
-    pdf.text(formatCurrency(detailedTotals.dppFaktur), rightMargin - 0.5, yPosition, { align: 'right' });
+    //pdf.text('DPP Faktur:', leftMargin + 14.0, yPosition);
+    //pdf.text(formatCurrency(detailedTotals.dppFaktur), rightMargin - 0.5, yPosition, { align: 'right' });
     yPosition += 0.5;
 
     checkPageBreak(0.5);
-    pdf.text('PPN 11%:', leftMargin + 14.0, yPosition);
-    pdf.text(formatCurrency(detailedTotals.ppn11), rightMargin - 0.5, yPosition, { align: 'right' });
+    //pdf.text('PPN 11%:', leftMargin + 14.0, yPosition);
+    //pdf.text(formatCurrency(detailedTotals.ppn11), rightMargin - 0.5, yPosition, { align: 'right' });
 
     // Final total
     yPosition += 0.4;
