@@ -680,6 +680,17 @@ const processSaleMutation = useMutation({
   },
 });
 
+// Gunakan di semua perhitungan supaya konsisten
+const getEffectiveUnitPrice = (item: CartItem) => {
+  const fallback =
+    item.unitType === "pcs"
+      ? Number(item.product?.price_per_pcs ?? item.product?.price ?? 0)
+      : Number(item.product?.price ?? 0);
+
+  const cp = item.customPrice;
+  const parsed = cp != null ? Number(cp) : NaN;
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
 
 
   const generateReceipt = async (sale: any) => {
