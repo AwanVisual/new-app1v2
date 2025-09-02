@@ -621,7 +621,7 @@ const processSaleMutation = useMutation({
     subtotal: effectivePrice * item.quantity, 
     discount: item.customDiscount,
   };
-        }));
+        });
 
       const { error: itemsErr } = await supabase
         .from("sale_items")
