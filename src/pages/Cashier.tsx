@@ -603,7 +603,7 @@ const processSaleMutation = useMutation({
       if (saleError) throw saleError;
       saleRow = sale;
 
-const saleItems = cart.map((item) => {
+        const saleItems = cart.map((item) => {
   // ✅ di sini boleh bikin variable tambahan
   const effectivePrice = item.customPrice
     ? Number(item.customPrice)
@@ -621,7 +621,7 @@ const saleItems = cart.map((item) => {
     subtotal: effectivePrice * item.quantity, // ✅ subtotal pakai effectivePrice
     discount: item.customDiscount,
   };
-      }));
+        }));
 
       const { error: itemsErr } = await supabase
         .from("sale_items")
