@@ -1498,6 +1498,29 @@ pdf.text("Tgl: ____________________", leftMargin + 1.0, yPosition);
                             </Button>
                           </div>
                         </div>
+                          {/* Item Custom Price Input */}
+  <div className="flex items-center space-x-2">
+  <Label htmlFor={`price-${item.product.id}`} className="text-sm">
+    Custom Price:
+  </Label>
+  <Input
+    id={`price-${item.product.id}`}
+    type="number"
+    min="0"
+    step="0.01"
+    value={item.customPrice ?? ""}
+    onChange={(e) =>
+      setCart((prev) =>
+        prev.map((ci) =>
+          ci.product.id === item.product.id
+            ? { ...ci, customPrice: parseFloat(e.target.value) || undefined }
+            : ci
+        )
+      )
+    }
+    className="w-24 h-8 text-sm"
+  />
+</div>
 
                         {/* Item Discount Input */}
                         <div className="flex items-center space-x-2">
