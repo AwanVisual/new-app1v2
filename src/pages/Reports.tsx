@@ -1428,12 +1428,7 @@ pdf.text("Tgl: ____________________", leftMargin + 1.0, yPosition);
                       )}
                     </div>
                     
-                    {/* Signature Section */}
-                    
-                    </div>
-                  </div>
-                </div>
-              </div>
+
 
               <DialogFooter>
                 <Button variant="outline" onClick={handleCancelEditItems}>
