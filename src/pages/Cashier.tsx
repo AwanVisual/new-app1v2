@@ -962,6 +962,24 @@ const processSaleMutation = useMutation({
       }
     }
 
+// ✅ Tambahkan tanda tangan
+yPosition += 2.0; // beri jarak ke bawah section terakhir
+checkPageBreak(2.0);
+pdf.setFontSize(10);
+pdf.setFont('helvetica', 'normal');
+
+// Label
+pdf.text("Diterima oleh", leftMargin + 1.0, yPosition);
+
+// Geser lebih jauh sebelum garis
+yPosition += 1.2; // tadinya 0.8 → diganti 1.2 biar lebih jauh
+pdf.line(leftMargin + 1.0, yPosition, leftMargin + 7.0, yPosition); // garis ttd
+
+// Tanggal di bawah garis
+yPosition += 0.8; // jarak garis ke tulisan tanggal
+pdf.text("Tgl: ____________________", leftMargin + 1.0, yPosition);
+
+    
     // Save PDF
     pdf.save(`Invoice-${sale.sale_number}.pdf`);
     
