@@ -1209,14 +1209,7 @@ pdf.text("Tgl: ____________________", leftMargin + 1.0, yPosition);
             </div>
           </div>
           
-          {/* Signature Section */}
-          <div className="mt-8 pt-4 border-t border-gray-300">
-            <div className="text-left">
-              <p className="text-sm mb-8">Diterima oleh</p>
-              <div className="border-b border-gray-400 w-48 mb-2"></div>
-              <p className="text-sm">Tgl</p>
-            </div>
-          </div>
+          
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsReorderDialogOpen(false)}>
               Batal
