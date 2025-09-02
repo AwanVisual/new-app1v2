@@ -905,6 +905,8 @@ pdf.text("Tgl: ____________________", leftMargin + 1.0, yPosition);
           </Button>
           
           
+        </div>
+      </div>
 
       {/* Edit Item Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
