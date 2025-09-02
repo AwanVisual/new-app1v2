@@ -608,16 +608,17 @@ const processSaleMutation = useMutation({
     ? Number(item.customPrice)
     : (item.unitType === "pcs"
         ? Number(item.product.price_per_pcs || item.product.price)
-        : Number(item.product.price));
-
-        sale_id: saleRow.id,
-        product_id: item.product.id,
-        unit_id: null,
-        unit_type: item.unitType,
-        quantity: item.quantity,
-        unit_price: effectivePrice,          // ✅ ganti pakai effectivePrice
-        subtotal: effectivePrice * item.quantity, // ✅ subtotal ikut pakai effectivePrice
-        discount: item.customDiscount,
+        : Number(item.product.price))
+          return {
+    sale_id: saleRow.id,
+    product_id: item.product.id,
+    unit_id: null,
+    unit_type: item.unitType,
+    quantity: item.quantity,
+    unit_price: effectivePrice,              // ✅ ganti jadi effectivePrice
+    subtotal: effectivePrice * item.quantity, // ✅ subtotal pakai effectivePrice
+    discount: item.customDiscount,
+  };
       }));
 
       const { error: itemsErr } = await supabase
