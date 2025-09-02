@@ -880,9 +880,11 @@ const getEffectiveUnitPrice = (item: CartItem) => {
         : `${item.quantity} ${item.product.base_unit}`;
       
       // Use correct price based on unit type
-      const unitPrice = item.unitType === 'pcs' 
-        ? Number(item.product.price_per_pcs || item.product.price)
-        : Number(item.product.price);
+      const unitPrice = item.customPrice
+        ? Number(item.customPrice)
+  : (item.unitType === 'pcs'
+      ? Number(item.product.price_per_pcs || item.product.price)
+      : Number(item.product.price));
       pdf.text(productName, leftMargin, yPosition);
       pdf.text(quantityDisplay, leftMargin + 12.0, yPosition, { align: 'center' });
       pdf.text(formatCurrency(unitPrice), leftMargin + 16.0, yPosition, { align: 'right' });
