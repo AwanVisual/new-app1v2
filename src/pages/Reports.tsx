@@ -1427,23 +1427,11 @@ pdf.text("Tgl: ____________________", leftMargin + 1.0, yPosition);
                         }, 0)
                       )}
                     </div>
-                    {/* Signature Section */}
-                    <div className="border-t pt-4 mt-6 text-left">
-                      <div className="flex justify-between items-end">
-                        <div>
-                          <p className="text-sm mb-8">Diterima oleh:</p>
-                          <div className="border-b border-black w-48 mb-2"></div>
-                        </div>
-                        <div>
-                          <p className="text-sm mb-8">Tgl:</p>
-                          <div className="border-b border-black w-32 mb-2"></div>
-                        </div>
-                      </div>
-                    </div>
+                    
+                    
                   </div>
                 </div>
               </div>
-
 
               <DialogFooter>
                 <Button variant="outline" onClick={handleCancelEditItems}>
