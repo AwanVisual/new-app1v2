@@ -617,8 +617,8 @@ const processSaleMutation = useMutation({
     unit_id: null,
     unit_type: item.unitType,
     quantity: item.quantity,
-    unit_price: effectivePrice,               // ✅ pakai effectivePrice
-    subtotal: effectivePrice * item.quantity, // ✅ subtotal pakai effectivePrice
+    unit_price: effectivePrice,               
+    subtotal: effectivePrice * item.quantity, 
     discount: item.customDiscount,
   };
         }));
