@@ -603,19 +603,21 @@ const processSaleMutation = useMutation({
       if (saleError) throw saleError;
       saleRow = sale;
 
-      const saleItems = cart.map((item) => ({
-        const effectivePrice = item.customPrice
+const saleItems = cart.map((item) => {
+  // ✅ di sini boleh bikin variable tambahan
+  const effectivePrice = item.customPrice
     ? Number(item.customPrice)
     : (item.unitType === "pcs"
         ? Number(item.product.price_per_pcs || item.product.price)
-        : Number(item.product.price))
-          return {
+        : Number(item.product.price));
+
+  return {
     sale_id: saleRow.id,
     product_id: item.product.id,
     unit_id: null,
     unit_type: item.unitType,
     quantity: item.quantity,
-    unit_price: effectivePrice,              // ✅ ganti jadi effectivePrice
+    unit_price: effectivePrice,               // ✅ pakai effectivePrice
     subtotal: effectivePrice * item.quantity, // ✅ subtotal pakai effectivePrice
     discount: item.customDiscount,
   };
