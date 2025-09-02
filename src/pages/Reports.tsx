@@ -683,7 +683,7 @@ pdf.setFont('helvetica', 'normal');
 pdf.text("Diterima oleh", leftMargin + 1.0, yPosition);
 
 // Geser lebih jauh sebelum garis
-yPosition += 1.2; // tadinya 0.8 → diganti 1.2 biar lebih jauh
+yPosition += 2.2; // tadinya 0.8 → diganti 1.2 biar lebih jauh
 pdf.line(leftMargin + 1.0, yPosition, leftMargin + 7.0, yPosition); // garis ttd
 
 // Tanggal di bawah garis
