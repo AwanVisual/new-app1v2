@@ -981,7 +981,7 @@ const getEffectiveUnitPrice = (item: CartItem) => {
     }
 
 // ✅ Tambahkan tanda tangan
-yPosition += 2.0; // beri jarak ke bawah section terakhir
+yPosition += 0.0; // beri jarak ke bawah section terakhir
 checkPageBreak(2.0);
 pdf.setFontSize(10);
 pdf.setFont('helvetica', 'normal');
