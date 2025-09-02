@@ -604,19 +604,19 @@ const processSaleMutation = useMutation({
       saleRow = sale;
 
       const saleItems = cart.map((item) => ({
+        const effectivePrice = item.customPrice
+    ? Number(item.customPrice)
+    : (item.unitType === "pcs"
+        ? Number(item.product.price_per_pcs || item.product.price)
+        : Number(item.product.price));
+
         sale_id: saleRow.id,
         product_id: item.product.id,
         unit_id: null,
         unit_type: item.unitType,
         quantity: item.quantity,
-        unit_price:
-          item.unitType === "pcs"
-            ? Number(item.product.price_per_pcs || item.product.price)
-            : Number(item.product.price),
-        subtotal:
-          (item.unitType === "pcs"
-            ? Number(item.product.price_per_pcs || item.product.price)
-            : Number(item.product.price)) * item.quantity,
+        unit_price: effectivePrice,          // ✅ ganti pakai effectivePrice
+        subtotal: effectivePrice * item.quantity, // ✅ subtotal ikut pakai effectivePrice
         discount: item.customDiscount,
       }));
 
@@ -1499,7 +1499,7 @@ pdf.text("Tgl: ____________________", leftMargin + 1.0, yPosition);
                           </div>
                         </div>
                           {/* Item Custom Price Input */}
-  <div className="flex items-center space-x-2">
+<div className="flex items-center space-x-2">
   <Label htmlFor={`price-${item.product.id}`} className="text-sm">
     Custom Price:
   </Label>
