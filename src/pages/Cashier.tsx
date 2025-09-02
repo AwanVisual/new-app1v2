@@ -38,6 +38,7 @@ interface CartItem {
   quantity: number;
   unitType: 'pcs' | 'base_unit'; // Simple unit selection
   customDiscount: number; // Percentage discount for this specific item
+  customPrice?: number;
 }
 
 interface ReceiptFieldsConfig {
@@ -193,11 +194,12 @@ const calculateDetailedPricing = (item: CartItem) => {
     };
   }
 
-  const basePrice = Number(item.product?.price || 0);
-  const price =
-    item.unitType === "pcs"
-      ? Number(item.product?.price_per_pcs || basePrice)
-      : basePrice;
+// ✅ cek apakah ada customPrice
+const price = item.customPrice
+  ? Number(item.customPrice) // kalau ada customPrice, pakai ini
+  : (item.unitType === "pcs"
+      ? Number(item.product?.price_per_pcs || item.product?.price)
+      : Number(item.product?.price));
   const quantity = item.quantity;
   const itemDiscount = item.customDiscount || 0;
 
