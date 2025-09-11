@@ -68,7 +68,7 @@ const Auth = () => {
             />
           </div>
           <CardTitle className="text-2xl font-bold">
-            Awanvisual POS (DEMO)
+            Awanvisual POS 
           </CardTitle>
           <CardDescription>
             Inventory Management & Cashier System
